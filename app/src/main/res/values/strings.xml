@@ -1,3 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">MyFEFU</string>
+    <string name="app_name">My FEFU</string>
+    <string name="schedule">Schedule</string>
+    <string name="january">January</string>
+    <string name="february">February</string>
+    <string name="march">March</string>
+    <string name="april">April</string>
+    <string name="may">May</string>
+    <string name="june">June</string>
+    <string name="july">July</string>
+    <string name="august">August</string>
+    <string name="september">September</string>
+    <string name="october">October</string>
+    <string name="november">November</string>
+    <string name="december">December</string>
+    <string name="even">Even</string>
+    <string name="odd">Odd</string>
+    <string name="week">Week</string>
+    <string name="monday_abbreviated">Mo</string>
+    <string name="tuesday_abbreviated">Tu</string>
+    <string name="wednesday_abbreviated">We</string>
+    <string name="thursday_abbreviated">Th</string>
+    <string name="friday_abbreviated">Fr</string>
+    <string name="saturday_abbreviated">Sa</string>
+    <string name="sunday_abbreviated">Su</string>
+    <string name="loading">Loading</string>
+    <string name="back_to_date">Back on %1$s %2$d%3$s</string>
+    <string name="login">Login</string>
+    <string name="login_literally">Login</string>
+    <string name="password">Password</string>
+    <string name="login_verb">Login</string>
+    <string name="invalid_credentials">Invalid credentials</string>
+    <string name="subgroup">Subgroup</string>
 </resources>

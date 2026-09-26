@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Мой ДВФУ</string>
+    <string name="schedule">Расписание</string>
+    <string name="january">Январь</string>
+    <string name="february">Февраль</string>
+    <string name="march">Март</string>
+    <string name="april">Апрель</string>
+    <string name="may">Май</string>
+    <string name="june">Июнь</string>
+    <string name="july">Июль</string>
+    <string name="august">Август</string>
+    <string name="september">Сентябрь</string>
+    <string name="october">Октябрь</string>
+    <string name="november">Ноябрь</string>
+    <string name="december">Декабрь</string>
+    <string name="even">Чёт</string>
+    <string name="odd">Нечёт</string>
+    <string name="week">Неделя</string>
+    <string name="monday_abbreviated">Пн</string>
+    <string name="tuesday_abbreviated">Вт</string>
+    <string name="wednesday_abbreviated">Ср</string>
+    <string name="thursday_abbreviated">Чт</string>
+    <string name="friday_abbreviated">Пт</string>
+    <string name="saturday_abbreviated">Сб</string>
+    <string name="sunday_abbreviated">Вс</string>
+    <string name="loading">Загрузка</string>
+    <string name="back_to_date">Обратно в%3$s %2$d %1$s</string>
+    <string name="login">Вход</string>
+    <string name="login_literally">Логин</string>
+    <string name="password">Пароль</string>
+    <string name="login_verb">Войти</string>
+    <string name="invalid_credentials">Неверные учётные данные</string>
+    <string name="subgroup">Подгруппа</string>
+</resources>
