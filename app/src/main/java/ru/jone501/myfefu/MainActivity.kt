@@ -35,6 +35,7 @@ import ru.jone501.myfefu.lucide.CalendarDays
 import ru.jone501.myfefu.lucide.MapPin
 import ru.jone501.myfefu.lucide.QrCode
 import ru.jone501.myfefu.pages.SchedulePage
+import ru.jone501.myfefu.ui.theme.Default
 import ru.jone501.myfefu.ui.theme.MyFEFUTheme
 
 class MainActivity : ComponentActivity() {
@@ -44,7 +45,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             val selectedMenu = remember { mutableIntStateOf(2) }
 
-            MyFEFUTheme {
+            MyFEFUTheme(Default) {
                 Scaffold { padding ->
                     val paddingWithoutBottom = PaddingValues(
                         padding.calculateLeftPadding(LayoutDirection.Ltr),
