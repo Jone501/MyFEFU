@@ -48,7 +48,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
 import ru.jone501.myfefu.R
+import ru.jone501.myfefu.ui.theme.Default
 import ru.jone501.myfefu.ui.theme.MontserratAlternates
 import ru.jone501.myfefu.ui.theme.MyFEFUTheme
 import ru.jone501.myfefu.utils.abbreviated
@@ -62,12 +64,12 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
+import kotlin.time.Duration.Companion.milliseconds
 
 @Composable
-@Preview
 fun SchedulePage() {
-    val subgroups = (1..3).map { "$it" }
-    val selectedSubgroup = rememberSaveable { mutableStateOf(subgroups[0]) }
+    val subgroups: MutableState<List<String>?> = rememberSaveable { mutableStateOf(null) }
+    val selectedSubgroup: MutableState<String?> = rememberSaveable { mutableStateOf(null) }
 
     val pagesCount = Int.MAX_VALUE
     val initialPage = pagesCount / 2
@@ -83,43 +85,56 @@ fun SchedulePage() {
         }
     }
 
-    MyFEFUTheme(darkTheme = true) {
-        Box(
+    LaunchedEffect("setup") {
+        delay(1000.milliseconds)
+        subgroups.value = (1..3).map { "$it" }
+        selectedSubgroup.value = subgroups.value?.getOrNull(0)
+    }
+
+    Box(
+        modifier = Modifier
+            .background(MaterialTheme.colorScheme.background)
+            .fillMaxSize()
+    ) {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(15.dp),
             modifier = Modifier
-                .background(MaterialTheme.colorScheme.background)
-                .fillMaxSize()
+                .padding(0.dp, 25.dp, 0.dp, 0.dp)
         ) {
             Column(
-                verticalArrangement = Arrangement.spacedBy(15.dp),
                 modifier = Modifier
-                    .padding(0.dp, 25.dp, 0.dp, 0.dp)
+                    .fillMaxWidth()
+                    .padding(25.dp, 0.dp)
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(25.dp, 0.dp)
-                ) {
+                Text(
+                    stringResource(R.string.schedule).uppercase(),
+                    fontSize = 24.sp,
+                    fontFamily = MontserratAlternates,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                Row {
+                    val selectedDay = today.getStartOfWeek()
+                        .plusWeeks(selectedWeekDelta.intValue.toLong())
+                        .plusDays(selectedDayOfWeek.value.value - 1L)
+                    val academicWeekNumber = selectedDay.academicWeekNumber()
                     Text(
-                        stringResource(R.string.schedule).uppercase(),
-                        fontSize = 24.sp,
+                        "${selectedDay.toStringWithMonth(LocalContext.current)} ${selectedDay.year}",
+                        fontSize = 16.sp,
                         fontFamily = MontserratAlternates,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onBackground
                     )
-                    Row {
-                        val selectedDay = today.getStartOfWeek()
-                            .plusWeeks(selectedWeekDelta.intValue.toLong())
-                            .plusDays(selectedDayOfWeek.value.value - 1L)
-                        val academicWeekNumber = selectedDay.academicWeekNumber()
+                    if (academicWeekNumber != null) {
                         Text(
-                            "${selectedDay.toStringWithMonth(LocalContext.current)} ${selectedDay.year}",
+                            " - ",
                             fontSize = 16.sp,
                             fontFamily = MontserratAlternates,
                             fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onBackground
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            if (academicWeekNumber != null) " - ${
+                            "${
                                 swapIfRu(
                                     stringResource(R.string.week).lowercase(),
                                     academicWeekNumber,
@@ -129,40 +144,45 @@ fun SchedulePage() {
                                 (if (academicWeekNumber % 2 == 0)
                                     stringResource(R.string.even)
                                 else stringResource(R.string.odd)).lowercase()
-                            })" else "",
+                            })",
                             fontSize = 16.sp,
                             fontFamily = MontserratAlternates,
                             fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
-                    Spacer(Modifier.height(5.dp))
+                }
+                Spacer(Modifier.height(10.dp))
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     SubgroupsSelector(selectedSubgroup, subgroups)
                 }
-                WeekPager(pagerState, initialPage, today, selectedDayOfWeek)
             }
-            Box(
-                Modifier
-                    .background(
-                        Brush.linearGradient(
-                            colors = listOf(
-                                MaterialTheme.colorScheme.background,
-                                MaterialTheme.colorScheme.background.copy(0f),
-                            ),
-                            start = Offset(0f, 200f),
-                            end = Offset(0f, 0f)
-                        )
-                    )
-                    .height(75.dp)
-                    .fillMaxWidth()
-                    .align(Alignment.BottomCenter)
-            )
+            WeekPager(pagerState, initialPage, today, selectedDayOfWeek, selectedSubgroup)
         }
+        Box(
+            Modifier
+                .background(
+                    Brush.linearGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.background,
+                            MaterialTheme.colorScheme.background.copy(0f),
+                        ),
+                        start = Offset(0f, 250f),
+                        end = Offset(0f, 0f)
+                    )
+                )
+                .height(90.dp)
+                .fillMaxWidth()
+                .align(Alignment.BottomCenter)
+        )
     }
 }
 
 @Composable
-fun WeekPager(pagerState: PagerState, initialPage: Int, today: LocalDate, selectedDayOfWeek: MutableState<DayOfWeek>) {
+fun WeekPager(pagerState: PagerState, initialPage: Int, today: LocalDate, selectedDayOfWeek: MutableState<DayOfWeek>, selectedSubgroup: MutableState<String?>) {
     val todayWeek = today.getStartOfWeek()
 
     HorizontalPager(pagerState) { page ->
@@ -189,7 +209,7 @@ fun WeekPager(pagerState: PagerState, initialPage: Int, today: LocalDate, select
 //                    lineHeight = 14.sp,
 //                    modifier = Modifier.padding(15.dp, 0.dp)
 //                )
-                LessonList(currentWeek.plusDays(selectedDayOfWeek.value.value - 1L))
+                LessonList(currentWeek.plusDays(selectedDayOfWeek.value.value - 1L), selectedSubgroup)
             }
         }
     }
@@ -260,7 +280,7 @@ fun RowScope.DayElement(date: LocalDate, selectedDayOfWeek: MutableState<DayOfWe
 }
 
 @Composable
-fun SubgroupsSelector(selectedSubgroup: MutableState<String>, subgroups: List<String>) {
+fun SubgroupsSelector(selectedSubgroup: MutableState<String?>, subgroups: MutableState<List<String>?>) {
     var subgroupMenuExpanded by remember { mutableStateOf(false) }
     val backgroundColor = animateColorAsState(
         if (subgroupMenuExpanded) MaterialTheme.colorScheme.surfaceTint
@@ -276,6 +296,10 @@ fun SubgroupsSelector(selectedSubgroup: MutableState<String>, subgroups: List<St
         modifier = Modifier
             .clickable(
                 onClick = {
+                    if (!subgroupMenuExpanded) {
+                        if (subgroups.value?.isEmpty()?: true)
+                            return@clickable
+                    }
                     subgroupMenuExpanded = !subgroupMenuExpanded
                 },
                 indication = null,
@@ -292,21 +316,26 @@ fun SubgroupsSelector(selectedSubgroup: MutableState<String>, subgroups: List<St
             .padding(10.dp, 1.dp, 1.dp, 1.dp)
     ) {
         Text(
-            "${stringResource(R.string.subgroup)}:",
+            stringResource(R.string.subgroup),
             color = MaterialTheme.colorScheme.onSurface,
             fontSize = 16.sp,
             fontWeight = FontWeight.Medium,
             fontFamily = MontserratAlternates,
-        )
-        Spacer(Modifier.width(10.dp))
-        Text(
-            selectedSubgroup.value,
-            fontFamily = MontserratAlternates,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.padding(0.dp, 2.dp)
         )
+        AnimatedVisibility(selectedSubgroup.value != null) {
+            Row {
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    selectedSubgroup.value ?: "-",
+                    fontFamily = MontserratAlternates,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.padding(0.dp, 2.dp)
+                )
+            }
+        }
         Spacer(Modifier.width(10.dp))
         AnimatedVisibility(subgroupMenuExpanded) {
             LazyRow(
@@ -316,7 +345,7 @@ fun SubgroupsSelector(selectedSubgroup: MutableState<String>, subgroups: List<St
 //                    .background(MaterialTheme.colorScheme.surface)
 //                    .background(backgroundColor.value)
             ) {
-                for (subgroup in subgroups) {
+                for (subgroup in subgroups.value?: listOf()) {
                     if (selectedSubgroup.value == subgroup)
                         continue
                     item {
@@ -345,7 +374,7 @@ fun SubgroupsSelector(selectedSubgroup: MutableState<String>, subgroups: List<St
 }
 
 @Composable
-fun LessonList(date: LocalDate) {
+fun LessonList(date: LocalDate, selectedSubgroup: MutableState<String?>) {
     LazyColumn(
         verticalArrangement = Arrangement.spacedBy(10.dp),
         modifier = Modifier
@@ -357,7 +386,7 @@ fun LessonList(date: LocalDate) {
                 LocalDateTime.of(date, LocalTime.of(10, 0)),
                 LocalDateTime.of(date, LocalTime.of(11, 30)),
                 "Лекционное занятие",
-                "D456",
+                "D${date.dayOfMonth} - ${selectedSubgroup.value}",
                 "Линейная алгебра"
             )
         }
@@ -417,7 +446,7 @@ fun LessonList(date: LocalDate) {
 
 @Composable
 fun LessonElement(startTime: LocalDateTime, endTime: LocalDateTime, type: String, facility: String?, discipline: String) {
-    val nowDateTime = LocalDateTime.of(2026, 9, 25, 12, 0)
+    val nowDateTime = LocalDateTime.now()
     val isNow = startTime.toLocalDate() == nowDateTime.toLocalDate()
             && startTime.isBefore(nowDateTime)
             && endTime.isAfter(nowDateTime)
@@ -482,5 +511,13 @@ fun LessonElement(startTime: LocalDateTime, endTime: LocalDateTime, type: String
             fontWeight = FontWeight.SemiBold,
             fontFamily = MontserratAlternates
         )
+    }
+}
+
+@Composable
+@Preview
+fun Preview() {
+    MyFEFUTheme(Default, true) {
+        SchedulePage()
     }
 }

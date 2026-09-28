@@ -1,5 +1,9 @@
 package ru.jone501.myfefu
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import android.content.pm.ActivityInfo
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -22,6 +26,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -29,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import ru.jone501.myfefu.lucide.CalendarDays
@@ -43,6 +49,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
+            LockScreenOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT)
             val selectedMenu = remember { mutableIntStateOf(2) }
 
             MyFEFUTheme(Default) {
@@ -56,23 +63,24 @@ class MainActivity : ComponentActivity() {
                     Box(Modifier.padding(paddingWithoutBottom)) {
                         SchedulePage()
                         Row(
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
                             modifier = Modifier
                                 .align(Alignment.BottomCenter)
-                                .padding(0.dp, 0.dp, 0.dp, padding.calculateBottomPadding())
+                                .padding(
+                                    0.dp,
+                                    0.dp,
+                                    0.dp,
+                                    padding.calculateBottomPadding()
+                                )
+                                .background(
+                                    MaterialTheme.colorScheme.background,
+                                    CircleShape
+                                )
+                                .padding(10.dp)
                         ) {
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                modifier = Modifier
-                                    .background(
-                                        MaterialTheme.colorScheme.background,
-                                        CircleShape
-                                    )
-                                    .padding(10.dp)
-                            ) {
-                                MenuButton(1, selectedMenu) { x -> MapPin(x) }
-                                MenuButton(2, selectedMenu) { x -> CalendarDays(x) }
-                                MenuButton(3, selectedMenu) { x -> QrCode(x) }
-                            }
+                            MenuButton(1, selectedMenu) { x -> MapPin(x) }
+                            MenuButton(2, selectedMenu) { x -> CalendarDays(x) }
+                            MenuButton(3, selectedMenu) { x -> QrCode(x) }
                         }
                     }
                 }
@@ -90,7 +98,7 @@ fun MenuButton(index: Int, selectedMenu: MutableState<Int>, iconFunction: (Color
     )
     val iconColor = animateColorAsState(
         if (selected) MaterialTheme.colorScheme.onBackground
-        else MaterialTheme.colorScheme.onSurface
+        else MaterialTheme.colorScheme.onSurfaceVariant
     )
     val outlineColor = animateColorAsState(
         if (selected) MaterialTheme.colorScheme.onBackground
@@ -123,4 +131,24 @@ fun MenuButton(index: Int, selectedMenu: MutableState<Int>, iconFunction: (Color
             "image"
         )
     }
+}
+
+@Composable
+fun LockScreenOrientation(orientation: Int) {
+    val context = LocalContext.current
+    DisposableEffect(Unit) {
+        val activity = context.findActivity() ?: return@DisposableEffect onDispose {}
+        val originalOrientation = activity.requestedOrientation
+        activity.requestedOrientation = orientation
+        onDispose {
+            // restore original orientation when view disappears
+            activity.requestedOrientation = originalOrientation
+        }
+    }
+}
+
+fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
 }
