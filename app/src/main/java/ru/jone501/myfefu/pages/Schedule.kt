@@ -1,5 +1,6 @@
 package ru.jone501.myfefu.pages
 
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.BorderStroke
@@ -19,7 +20,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
@@ -32,11 +35,15 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableStateSetOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.snapshots.SnapshotStateMap
+import androidx.compose.runtime.snapshots.SnapshotStateSet
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,27 +55,36 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.delay
+import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
+import org.koin.compose.koinInject
 import ru.jone501.myfefu.R
+import ru.jone501.myfefu.Routes
+import ru.jone501.myfefu.domain.model.Lesson
+import ru.jone501.myfefu.domain.model.StudentProfileInfo
+import ru.jone501.myfefu.domain.model.facilityPrettier
+import ru.jone501.myfefu.networking.api.ApiService
+import ru.jone501.myfefu.networking.api.request.ScheduleRequest
+import ru.jone501.myfefu.networking.token.NetworkRequestInterceptor
 import ru.jone501.myfefu.ui.theme.Default
 import ru.jone501.myfefu.ui.theme.MontserratAlternates
 import ru.jone501.myfefu.ui.theme.MyFEFUTheme
 import ru.jone501.myfefu.utils.abbreviated
 import ru.jone501.myfefu.utils.academicWeekNumber
+import ru.jone501.myfefu.utils.academicYearStartDate
 import ru.jone501.myfefu.utils.getMainLocale
 import ru.jone501.myfefu.utils.getStartOfWeek
 import ru.jone501.myfefu.utils.swapIfRu
 import ru.jone501.myfefu.utils.toStringWithMonth
+import java.io.IOException
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.time.LocalTime
 import java.time.format.DateTimeFormatter
-import kotlin.time.Duration.Companion.milliseconds
 
 @Composable
-fun SchedulePage() {
-    val subgroups: MutableState<List<String>?> = rememberSaveable { mutableStateOf(null) }
+fun SchedulePage(navController: NavController, apiService: ApiService = koinInject()) {
+    val subgroups: SnapshotStateSet<String> = remember { mutableStateSetOf() }
     val selectedSubgroup: MutableState<String?> = rememberSaveable { mutableStateOf(null) }
 
     val pagesCount = Int.MAX_VALUE
@@ -79,16 +95,78 @@ fun SchedulePage() {
     val selectedWeekDelta = rememberSaveable { mutableIntStateOf(0) }
     val selectedDayOfWeek = rememberSaveable { mutableStateOf(today.dayOfWeek) }
 
+    val startOfAcademicYear = today.academicYearStartDate()
+
+    val studentProfileState: MutableState<StudentProfileInfo?> = remember { mutableStateOf(null) }
+    val lessonsState: SnapshotStateMap<LocalDate, MutableList<Lesson>> = remember { mutableStateMapOf() }
+
+    LaunchedEffect("lessons") {
+        // Student Profile
+        try {
+            apiService.getStudentProfile().let {
+                if (it.isSuccessful) {
+                    studentProfileState.value = it.body()?.data?.firstOrNull()
+                } else when (it.code()) {
+                    NetworkRequestInterceptor.UNAUTHORIZED_CODE,
+                    NetworkRequestInterceptor.FORBIDDEN_CODE -> {
+                        navController.navigate(Routes.Login)
+                    }
+                }
+            }
+        } catch (e: IOException) {
+            Log.i("ERROR", e.message, e)
+        }
+        // Lessons
+        try {
+            val studentProfileInfo: StudentProfileInfo? = studentProfileState.value
+            if (studentProfileInfo != null) {
+                apiService.getSchedule(
+                    ScheduleRequest(
+                        "query ReadLessons {lessons(start_time: \"$startOfAcademicYear 00:00:00\", end_time: \"${
+                            startOfAcademicYear.plusYears(
+                                1
+                            )
+                        } 00:00:00\", academic_groups: [${studentProfileInfo.academicGroupId}]) {id guid discipline {name name_en} start_time end_time academicGroup {name} facility {name} teacher {fullName id academicDegree {name name_en}} academicControl {name name_en} ppsLoad {name name_en} academicSubgroup {name} distance_education_url distance_education_description}}"
+                    )
+                ).let {
+                    if (it.isSuccessful) {
+                        var addedLessons = 0
+                        var addedSubgroups = 0
+                        val lessonsToAdd = it.body()?.data?.lessons ?: listOf()
+                        for (lesson in lessonsToAdd) {
+                            val lessonDate = lesson.start_time.toLocalDate()
+                            if (lessonsState[lessonDate] == null) {
+                                lessonsState[lessonDate] = mutableListOf()
+                            }
+                            if (!lessonsState[lessonDate]!!.contains(lesson)) {
+                                lessonsState[lessonDate]!!.add(lesson)
+                                addedLessons++
+                                if (lesson.academicSubgroup != null) {
+                                    if (subgroups.add(lesson.academicSubgroup!!.name))
+                                        addedSubgroups++
+                                }
+                            }
+                        }
+                        Log.i("LESSONS", "New: $addedLessons, Total: ${lessonsToAdd.size}")
+                        Log.i("SUBGROUPS", "New: $addedSubgroups, Total: ${subgroups.size}")
+                        selectedSubgroup.value = subgroups.minOrNull()
+                    } else when (it.code()) {
+                        NetworkRequestInterceptor.UNAUTHORIZED_CODE,
+                        NetworkRequestInterceptor.FORBIDDEN_CODE -> {
+                            navController.navigate(Routes.Login)
+                        }
+                    }
+                }
+            }
+        } catch (e: IOException) {
+            Log.i("ERROR", e.message, e)
+        }
+    }
+
     LaunchedEffect(null) {
         snapshotFlow { pagerState.currentPage }.collect { page ->
             selectedWeekDelta.intValue = page - initialPage
         }
-    }
-
-    LaunchedEffect("setup") {
-        delay(1000.milliseconds)
-        subgroups.value = (1..3).map { "$it" }
-        selectedSubgroup.value = subgroups.value?.getOrNull(0)
     }
 
     Box(
@@ -152,15 +230,18 @@ fun SchedulePage() {
                         )
                     }
                 }
-                Spacer(Modifier.height(10.dp))
-                Row(
-                    horizontalArrangement = Arrangement.Center,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    SubgroupsSelector(selectedSubgroup, subgroups)
+                AnimatedVisibility(!subgroups.isEmpty()) {
+                    Row(
+                        horizontalArrangement = Arrangement.Center,
+                        modifier = Modifier
+                            .padding(0.dp, 10.dp, 0.dp, 0.dp)
+                            .fillMaxWidth()
+                    ) {
+                        SubgroupsSelector(selectedSubgroup, subgroups)
+                    }
                 }
             }
-            WeekPager(pagerState, initialPage, today, selectedDayOfWeek, selectedSubgroup)
+            WeekPager(pagerState, initialPage, today, selectedDayOfWeek, selectedSubgroup, lessonsState)
         }
         Box(
             Modifier
@@ -182,12 +263,13 @@ fun SchedulePage() {
 }
 
 @Composable
-fun WeekPager(pagerState: PagerState, initialPage: Int, today: LocalDate, selectedDayOfWeek: MutableState<DayOfWeek>, selectedSubgroup: MutableState<String?>) {
+fun WeekPager(pagerState: PagerState, initialPage: Int, today: LocalDate, selectedDayOfWeek: MutableState<DayOfWeek>, selectedSubgroup: MutableState<String?>, lessonsState: SnapshotStateMap<LocalDate, MutableList<Lesson>>) {
     val todayWeek = today.getStartOfWeek()
 
     HorizontalPager(pagerState) { page ->
         val weekDelta = page - initialPage
         val currentWeek = todayWeek.plusWeeks(weekDelta.toLong())
+
         Column(
             verticalArrangement = Arrangement.spacedBy(15.dp),
             modifier = Modifier
@@ -209,7 +291,11 @@ fun WeekPager(pagerState: PagerState, initialPage: Int, today: LocalDate, select
 //                    lineHeight = 14.sp,
 //                    modifier = Modifier.padding(15.dp, 0.dp)
 //                )
-                LessonList(currentWeek.plusDays(selectedDayOfWeek.value.value - 1L), selectedSubgroup)
+                LessonList(
+                    currentWeek.plusDays(selectedDayOfWeek.value.value - 1L),
+                    lessonsState,
+                    selectedSubgroup
+                )
             }
         }
     }
@@ -280,7 +366,7 @@ fun RowScope.DayElement(date: LocalDate, selectedDayOfWeek: MutableState<DayOfWe
 }
 
 @Composable
-fun SubgroupsSelector(selectedSubgroup: MutableState<String?>, subgroups: MutableState<List<String>?>) {
+fun SubgroupsSelector(selectedSubgroup: MutableState<String?>, subgroups: SnapshotStateSet<String>) {
     var subgroupMenuExpanded by remember { mutableStateOf(false) }
     val backgroundColor = animateColorAsState(
         if (subgroupMenuExpanded) MaterialTheme.colorScheme.surfaceTint
@@ -297,7 +383,7 @@ fun SubgroupsSelector(selectedSubgroup: MutableState<String?>, subgroups: Mutabl
             .clickable(
                 onClick = {
                     if (!subgroupMenuExpanded) {
-                        if (subgroups.value?.isEmpty()?: true)
+                        if (subgroups.isEmpty())
                             return@clickable
                     }
                     subgroupMenuExpanded = !subgroupMenuExpanded
@@ -345,7 +431,7 @@ fun SubgroupsSelector(selectedSubgroup: MutableState<String?>, subgroups: Mutabl
 //                    .background(MaterialTheme.colorScheme.surface)
 //                    .background(backgroundColor.value)
             ) {
-                for (subgroup in subgroups.value?: listOf()) {
+                for (subgroup in subgroups) {
                     if (selectedSubgroup.value == subgroup)
                         continue
                     item {
@@ -374,65 +460,22 @@ fun SubgroupsSelector(selectedSubgroup: MutableState<String?>, subgroups: Mutabl
 }
 
 @Composable
-fun LessonList(date: LocalDate, selectedSubgroup: MutableState<String?>) {
+fun LessonList(date: LocalDate, lessonsState: SnapshotStateMap<LocalDate, MutableList<Lesson>>, selectedSubgroup: MutableState<String?>) {
     LazyColumn(
         verticalArrangement = Arrangement.spacedBy(10.dp),
         modifier = Modifier
             .clip(RoundedCornerShape(25.dp, 25.dp, 0.dp, 0.dp))
-            .fillMaxWidth()
+            .fillMaxSize()
     ) {
-        item {
+        items(lessonsState[date]?.filter { lesson ->
+            lesson.academicSubgroup == null || lesson.academicSubgroup?.name == selectedSubgroup.value
+        }?.sortedBy { it.start_time }?: listOf(), key = { it.id }) { lesson ->
             LessonElement(
-                LocalDateTime.of(date, LocalTime.of(10, 0)),
-                LocalDateTime.of(date, LocalTime.of(11, 30)),
-                "Лекционное занятие",
-                "D${date.dayOfMonth} - ${selectedSubgroup.value}",
-                "Линейная алгебра"
-            )
-        }
-        item {
-            LessonElement(
-                LocalDateTime.of(date, LocalTime.of(11, 40)),
-                LocalDateTime.of(date, LocalTime.of(13, 10)),
-                "Лекционное занятие",
-                "D619",
-                "Основы российской государственности"
-            )
-        }
-        item {
-            LessonElement(
-                LocalDateTime.of(date, LocalTime.of(13, 20)),
-                LocalDateTime.of(date, LocalTime.of(14, 50)),
-                "Практическое занятие",
-                "D733",
-                "Математический анализ"
-            )
-        }
-        item {
-            LessonElement(
-                LocalDateTime.of(date, LocalTime.of(13, 20)),
-                LocalDateTime.of(date, LocalTime.of(14, 50)),
-                "Практическое занятие",
-                "D733",
-                "Математический анализ"
-            )
-        }
-        item {
-            LessonElement(
-                LocalDateTime.of(date, LocalTime.of(13, 20)),
-                LocalDateTime.of(date, LocalTime.of(14, 50)),
-                "Практическое занятие",
-                "D733",
-                "Математический анализ"
-            )
-        }
-        item {
-            LessonElement(
-                LocalDateTime.of(date, LocalTime.of(13, 20)),
-                LocalDateTime.of(date, LocalTime.of(14, 50)),
-                "Практическое занятие",
-                "D733",
-                "Математический анализ"
+                lesson.start_time,
+                lesson.end_time,
+                lesson.ppsLoad.name,
+                facilityPrettier(lesson.facility?.name),
+                lesson.discipline.name
             )
         }
         item {
@@ -445,7 +488,7 @@ fun LessonList(date: LocalDate, selectedSubgroup: MutableState<String?>) {
 }
 
 @Composable
-fun LessonElement(startTime: LocalDateTime, endTime: LocalDateTime, type: String, facility: String?, discipline: String) {
+fun LazyItemScope.LessonElement(startTime: LocalDateTime, endTime: LocalDateTime, type: String, facility: String?, discipline: String) {
     val nowDateTime = LocalDateTime.now()
     val isNow = startTime.toLocalDate() == nowDateTime.toLocalDate()
             && startTime.isBefore(nowDateTime)
@@ -473,6 +516,7 @@ fun LessonElement(startTime: LocalDateTime, endTime: LocalDateTime, type: String
             )
             .fillMaxWidth()
             .padding(15.dp)
+            .animateItem()
     ) {
         Row(
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -518,6 +562,6 @@ fun LessonElement(startTime: LocalDateTime, endTime: LocalDateTime, type: String
 @Preview
 fun Preview() {
     MyFEFUTheme(Default, true) {
-        SchedulePage()
+        SchedulePage(rememberNavController())
     }
 }

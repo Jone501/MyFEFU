@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.navigation.compose.rememberNavController
 import ru.jone501.myfefu.pages.SchedulePage
 
 private val LightColorScheme = lightColorScheme(
@@ -85,6 +86,6 @@ fun MyFEFUTheme(
 @Preview
 fun Preview() {
     MyFEFUTheme(FefuBlue, true) {
-        SchedulePage()
+        SchedulePage(rememberNavController())
     }
 }

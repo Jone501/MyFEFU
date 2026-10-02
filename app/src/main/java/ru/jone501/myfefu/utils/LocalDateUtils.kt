@@ -14,6 +14,10 @@ fun LocalDate.academicYearStart(): Int {
     else year
 }
 
+fun LocalDate.academicYearStartDate(): LocalDate {
+    return LocalDate.of(academicYearStart(), 9, 1)
+}
+
 fun LocalDate.academicWeekNumber(): Int? {
     var current = this
     var number = 0
