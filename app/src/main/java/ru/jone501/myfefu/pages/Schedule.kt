@@ -428,8 +428,6 @@ fun SubgroupsSelector(selectedSubgroup: MutableState<String?>, subgroups: Snapsh
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .clip(RoundedCornerShape(25.dp))
-//                    .background(MaterialTheme.colorScheme.surface)
-//                    .background(backgroundColor.value)
             ) {
                 for (subgroup in subgroups) {
                     if (selectedSubgroup.value == subgroup)

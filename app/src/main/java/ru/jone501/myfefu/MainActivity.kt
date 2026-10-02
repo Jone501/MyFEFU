@@ -1,11 +1,13 @@
 package ru.jone501.myfefu
 
 import android.app.Activity
+import android.app.Application
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.pm.ActivityInfo
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.animateColorAsState
@@ -51,7 +53,6 @@ import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.compose.koinInject
 import org.koin.core.context.GlobalContext.startKoin
-import org.koin.core.error.ApplicationAlreadyStartedException
 import ru.jone501.myfefu.data.repository.EncryptedSessionManager
 import ru.jone501.myfefu.di.coreModule
 import ru.jone501.myfefu.lucide.CalendarDays
@@ -60,23 +61,27 @@ import ru.jone501.myfefu.lucide.QrCode
 import ru.jone501.myfefu.networking.di.networkModule
 import ru.jone501.myfefu.pages.LoginPage
 import ru.jone501.myfefu.pages.SchedulePage
+import ru.jone501.myfefu.ui.lucide.LogOut
 import ru.jone501.myfefu.ui.theme.Default
 import ru.jone501.myfefu.ui.theme.MyFEFUTheme
+
+class MainApplication : Application() {
+    override fun onCreate() {
+        super.onCreate()
+        startKoin {
+            androidLogger()
+            androidContext(this@MainApplication)
+            modules(
+                coreModule,
+                networkModule
+            )
+        }
+    }
+}
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        try {
-            startKoin {
-                androidLogger()
-                androidContext(this@MainActivity)
-                modules(
-                    coreModule,
-                    networkModule
-                )
-            }
-        } catch (_: ApplicationAlreadyStartedException) {
-        }
         enableEdgeToEdge()
         setContent {
             LockScreenOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT)
@@ -96,6 +101,7 @@ class MainActivity : ComponentActivity() {
                             MainPageContainer(padding, navController)
                         }
                         composable<Routes.Login> {
+                            BackHandler(enabled = true) { }
                             LoginPage(padding, navController)
                         }
                     }
@@ -114,15 +120,15 @@ object Routes {
 }
 
 @Composable
-fun MainPageContainer(padding: PaddingValues, navController: NavController, sessionManager: EncryptedSessionManager = koinInject()) {
+fun MainPageContainer(padding: PaddingValues, navController: NavController) {
     val paddingWithoutBottom = PaddingValues(
         padding.calculateLeftPadding(LayoutDirection.Ltr),
         padding.calculateTopPadding(),
         padding.calculateRightPadding(LayoutDirection.Ltr),
         0.dp
     )
-    val selectedMenu = remember { mutableIntStateOf(2) }
-
+    val selectedMenu = remember { mutableIntStateOf(1) }
+    val sessionManager: EncryptedSessionManager = koinInject()
     val coroutineScope = rememberCoroutineScope()
 
     Box(Modifier.padding(paddingWithoutBottom)) {
@@ -143,14 +149,13 @@ fun MainPageContainer(padding: PaddingValues, navController: NavController, sess
                 )
                 .padding(10.dp)
         ) {
-            MenuButton(1, selectedMenu, onClick = {
+            MenuButton(1, selectedMenu) { x -> CalendarDays(x) }
+            MenuButton(2, selectedMenu, onClick = {
                 coroutineScope.launch {
                     sessionManager.clear()
                     navController.navigate(Routes.Login)
                 }
-            }) { x -> MapPin(x) }
-            MenuButton(2, selectedMenu) { x -> CalendarDays(x) }
-            MenuButton(3, selectedMenu) { x -> QrCode(x) }
+            }) { x -> LogOut(x) }
         }
     }
 }

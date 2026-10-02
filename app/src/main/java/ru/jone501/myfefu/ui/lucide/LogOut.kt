@@ -1,0 +1,56 @@
+package ru.jone501.myfefu.ui.lucide
+
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.path
+import androidx.compose.ui.unit.dp
+
+@Suppress("FunctionName")
+fun LogOut(color: Color = Color.Black): ImageVector {
+    return ImageVector.Builder(
+        name = "log-out",
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 24f,
+        viewportHeight = 24f
+    ).apply {
+        path(
+            fill = SolidColor(Color.Transparent),
+            stroke = SolidColor(color),
+            strokeLineWidth = 2f,
+            strokeLineCap = StrokeCap.Round,
+            strokeLineJoin = StrokeJoin.Round
+        ) {
+            moveTo(16f, 17f)
+            lineToRelative(5f, -5f)
+            lineToRelative(-5f, -5f)
+        }
+        path(
+            fill = SolidColor(Color.Transparent),
+            stroke = SolidColor(color),
+            strokeLineWidth = 2f,
+            strokeLineCap = StrokeCap.Round,
+            strokeLineJoin = StrokeJoin.Round
+        ) {
+            moveTo(21f, 12f)
+            horizontalLineTo(9f)
+        }
+        path(
+            fill = SolidColor(Color.Transparent),
+            stroke = SolidColor(color),
+            strokeLineWidth = 2f,
+            strokeLineCap = StrokeCap.Round,
+            strokeLineJoin = StrokeJoin.Round
+        ) {
+            moveTo(9f, 21f)
+            horizontalLineTo(5f)
+            arcToRelative(2f, 2f, 0f, false, true, -2f, -2f)
+            verticalLineTo(5f)
+            arcToRelative(2f, 2f, 0f, false, true, 2f, -2f)
+            horizontalLineToRelative(4f)
+        }
+    }.build()
+}
