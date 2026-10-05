@@ -32,7 +32,7 @@ class NetworkRequestInterceptor(
             && !request.url.toUrl().path.equals(ApiEndpoints.REFRESH_TOKEN_URL)
         ) {
             val authToken = runBlocking {
-                return@runBlocking sessionManager.get().first()
+                return@runBlocking sessionManager.getToken().first()
             }
             if (authToken != null) {
                 request = attachTokenToRequest(request, authToken.accessToken)
@@ -69,7 +69,7 @@ class NetworkRequestInterceptor(
             val tokenResponse = tokenService.refreshToken(RefreshTokenRequest(authToken.refreshToken))
             if (tokenResponse.isSuccessful) {
                 tokenResponse.body()?.let {
-                    sessionManager.set(AuthToken(it.access_token, it.refresh_token))
+                    sessionManager.setToken(AuthToken(it.access_token, it.refresh_token))
                     it.access_token
                 }
             } else null

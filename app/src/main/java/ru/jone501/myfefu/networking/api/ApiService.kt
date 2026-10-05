@@ -21,5 +21,5 @@ interface ApiService {
     suspend fun getProfile(): Response<BaseResponse<ProfileInfo>>
 
     @GET(STUDENT_PROFILE_URL)
-    suspend fun getStudentProfile(): Response<BaseResponse<Array<StudentProfileInfo>>>
+    suspend fun getStudentProfile(): Response<BaseResponse<List<StudentProfileInfo>>>
 }

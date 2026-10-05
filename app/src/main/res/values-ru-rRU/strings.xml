@@ -32,4 +32,6 @@
     <string name="login_verb">Войти</string>
     <string name="invalid_credentials">Неверные учётные данные</string>
     <string name="subgroup">Подгруппа</string>
+    <string name="settings">Настройки</string>
+    <string name="version">Версия</string>
 </resources>

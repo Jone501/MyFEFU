@@ -1,9 +1,6 @@
 package ru.jone501.myfefu.networking.di
 
-import com.google.gson.GsonBuilder
-import com.google.gson.TypeAdapter
-import com.google.gson.stream.JsonReader
-import com.google.gson.stream.JsonWriter
+import com.google.gson.Gson
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import org.koin.core.module.dsl.singleOf
@@ -14,9 +11,6 @@ import ru.jone501.myfefu.networking.ApiEndpoints
 import ru.jone501.myfefu.networking.api.ApiService
 import ru.jone501.myfefu.networking.token.NetworkRequestInterceptor
 import ru.jone501.myfefu.networking.token.TokenService
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 import java.util.concurrent.TimeUnit
 
 fun providesLoggingInterceptor(): HttpLoggingInterceptor {
@@ -44,37 +38,8 @@ fun provideHttpClient(
         .build()
 }
 
-fun provideConverterFactory(): GsonConverterFactory =
-    GsonConverterFactory.create(GsonBuilder()
-        .registerTypeAdapter(LocalDateTime::class.java, object :
-            TypeAdapter<LocalDateTime>() {
-            private val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
-            override fun write(
-                out: JsonWriter?,
-                value: LocalDateTime?
-            ) {
-                out?.value(value?.format(formatter))
-            }
-
-            override fun read(input: JsonReader?): LocalDateTime? {
-                return LocalDateTime.parse(input?.nextString(), formatter)
-            }
-        })
-        .registerTypeAdapter(LocalDate::class.java, object :
-            TypeAdapter<LocalDate>() {
-            private val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
-            override fun write(
-                out: JsonWriter?,
-                value: LocalDate?
-            ) {
-                out?.value(value?.format(formatter))
-            }
-
-            override fun read(input: JsonReader?): LocalDate? {
-                return LocalDate.parse(input?.nextString(), formatter)
-            }
-        })
-        .create())
+fun provideConverterFactory(gson: Gson): GsonConverterFactory =
+    GsonConverterFactory.create(gson)
 
 fun provideRetrofit(
     okHttpClient: OkHttpClient,

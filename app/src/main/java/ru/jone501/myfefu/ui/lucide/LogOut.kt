@@ -9,7 +9,7 @@ import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
 
 @Suppress("FunctionName")
-fun LogOut(color: Color = Color.Black): ImageVector {
+fun LogOut(color: Color = Color.Black, strokeWidth: Float = 2f): ImageVector {
     return ImageVector.Builder(
         name = "log-out",
         defaultWidth = 24.dp,
@@ -20,7 +20,7 @@ fun LogOut(color: Color = Color.Black): ImageVector {
         path(
             fill = SolidColor(Color.Transparent),
             stroke = SolidColor(color),
-            strokeLineWidth = 2f,
+            strokeLineWidth = strokeWidth,
             strokeLineCap = StrokeCap.Round,
             strokeLineJoin = StrokeJoin.Round
         ) {
@@ -31,7 +31,7 @@ fun LogOut(color: Color = Color.Black): ImageVector {
         path(
             fill = SolidColor(Color.Transparent),
             stroke = SolidColor(color),
-            strokeLineWidth = 2f,
+            strokeLineWidth = strokeWidth,
             strokeLineCap = StrokeCap.Round,
             strokeLineJoin = StrokeJoin.Round
         ) {
@@ -41,7 +41,7 @@ fun LogOut(color: Color = Color.Black): ImageVector {
         path(
             fill = SolidColor(Color.Transparent),
             stroke = SolidColor(color),
-            strokeLineWidth = 2f,
+            strokeLineWidth = strokeWidth,
             strokeLineCap = StrokeCap.Round,
             strokeLineJoin = StrokeJoin.Round
         ) {

@@ -11,9 +11,6 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.navigation.compose.rememberNavController
-import ru.jone501.myfefu.pages.SchedulePage
 
 private val LightColorScheme = lightColorScheme(
     primary = Color(0xFF00f7a3),
@@ -22,7 +19,8 @@ private val LightColorScheme = lightColorScheme(
     surfaceTint = Color(0xFFDBDBDB),
     onBackground = Color(0xFF000000),
     onSurface = Color(0xFF333333),
-    onSurfaceVariant = Color(0xFF666666)
+    onSurfaceVariant = Color(0xFF666666),
+    onTertiary = Color(0xFF999999)
 )
 
 private val DarkColorScheme = darkColorScheme(
@@ -33,6 +31,7 @@ private val DarkColorScheme = darkColorScheme(
     onBackground = Color(0xFFffffff),
     onSurface = Color(0xFFCCCCCC),
     onSurfaceVariant = Color(0xFF999999),
+    onTertiary = Color(0xFF666666)
 )
 
 private val FefuBlueLightColorScheme = lightColorScheme(
@@ -42,7 +41,8 @@ private val FefuBlueLightColorScheme = lightColorScheme(
     surfaceTint = Color(0xFFB3CCFF),
     onBackground = Color(0xFF3B63AB),
     onSurface = Color(0xFF597DCE),
-    onSurfaceVariant = Color(0xFF80A5EA)
+    onSurfaceVariant = Color(0xFF85ABF2),
+    onTertiary = Color(0xFFA9C1F1)
 )
 
 private val FefuBlueDarkColorScheme = darkColorScheme(
@@ -53,6 +53,7 @@ private val FefuBlueDarkColorScheme = darkColorScheme(
     onBackground = Color(0xFFFFFFFF),
     onSurface = Color(0xFFCCE0FF),
     onSurfaceVariant = Color(0xFF99B8FF),
+    onTertiary = Color(0xFF668AFF)
 )
 
 val Default: Pair<ColorScheme, ColorScheme> = LightColorScheme to DarkColorScheme
@@ -80,12 +81,4 @@ fun MyFEFUTheme(
         colorScheme = colorScheme,
         content = content
     )
-}
-
-@Composable
-@Preview
-fun Preview() {
-    MyFEFUTheme(FefuBlue, true) {
-        SchedulePage(rememberNavController())
-    }
 }

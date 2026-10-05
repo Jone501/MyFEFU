@@ -24,6 +24,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -31,37 +33,41 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
-import kotlinx.serialization.Serializable
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.compose.koinInject
+import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.context.GlobalContext.startKoin
 import ru.jone501.myfefu.data.repository.EncryptedSessionManager
+import ru.jone501.myfefu.data.viewmodel.LessonsViewModel
+import ru.jone501.myfefu.data.viewmodel.ProfileInfoViewModel
 import ru.jone501.myfefu.di.coreModule
-import ru.jone501.myfefu.lucide.CalendarDays
-import ru.jone501.myfefu.lucide.MapPin
-import ru.jone501.myfefu.lucide.QrCode
+import ru.jone501.myfefu.di.viewModelModule
 import ru.jone501.myfefu.networking.di.networkModule
 import ru.jone501.myfefu.pages.LoginPage
 import ru.jone501.myfefu.pages.SchedulePage
-import ru.jone501.myfefu.ui.lucide.LogOut
+import ru.jone501.myfefu.pages.SettingsPage
+import ru.jone501.myfefu.ui.lucide.CalendarDays
+import ru.jone501.myfefu.ui.lucide.Settings
 import ru.jone501.myfefu.ui.theme.Default
 import ru.jone501.myfefu.ui.theme.MyFEFUTheme
 
@@ -73,7 +79,8 @@ class MainApplication : Application() {
             androidContext(this@MainApplication)
             modules(
                 coreModule,
-                networkModule
+                networkModule,
+                viewModelModule,
             )
         }
     }
@@ -89,19 +96,28 @@ class MainActivity : ComponentActivity() {
             val sessionManager: EncryptedSessionManager = koinInject()
 
             LaunchedEffect("authorizationCheck") {
-                if (sessionManager.get().first() == null) {
-                    navController.navigate(Routes.Login)
+                if (sessionManager.getToken().firstOrNull() == null) {
+                    navController.navigateToLogin()
                 }
+            }
+
+            val profileInfoViewModel: ProfileInfoViewModel = koinViewModel()
+            val lessonsViewModel: LessonsViewModel = koinViewModel()
+            val requiresLoginByProfileViewModel: Boolean by profileInfoViewModel.requiresLogin.collectAsState()
+            val requiresLoginByLessonsViewModel: Boolean by lessonsViewModel.requiresLogin.collectAsState()
+            if (requiresLoginByProfileViewModel || requiresLoginByLessonsViewModel) {
+                profileInfoViewModel.clear()
+                navController.navigateToLogin()
             }
 
             MyFEFUTheme(Default) {
                 Scaffold { padding ->
-                    NavHost(navController, Routes.Main) {
-                        composable<Routes.Main> {
+                    NavHost(navController, Routes.MAIN) {
+                        composable(Routes.MAIN) {
                             MainPageContainer(padding, navController)
                         }
-                        composable<Routes.Login> {
-                            BackHandler(enabled = true) { }
+                        composable(Routes.LOGIN) {
+                            BackHandler { }
                             LoginPage(padding, navController)
                         }
                     }
@@ -111,28 +127,44 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-object Routes {
-    @Serializable
-    object Login
+fun NavController.navigateToLogin() {
+    if (this.currentBackStackEntry?.destination?.route != Routes.LOGIN)
+        this.navigate(Routes.LOGIN)
+}
 
-    @Serializable
-    object Main
+object Routes {
+    const val LOGIN = "LOGIN"
+    const val MAIN = "MAIN"
 }
 
 @Composable
-fun MainPageContainer(padding: PaddingValues, navController: NavController) {
+fun MainPageContainer(
+    padding: PaddingValues,
+    navController: NavController
+) {
     val paddingWithoutBottom = PaddingValues(
         padding.calculateLeftPadding(LayoutDirection.Ltr),
         padding.calculateTopPadding(),
         padding.calculateRightPadding(LayoutDirection.Ltr),
         0.dp
     )
-    val selectedMenu = remember { mutableIntStateOf(1) }
-    val sessionManager: EncryptedSessionManager = koinInject()
+    val selectedMenu = rememberSaveable { mutableIntStateOf(1) }
     val coroutineScope = rememberCoroutineScope()
 
-    Box(Modifier.padding(paddingWithoutBottom)) {
-        SchedulePage(navController)
+    val pagerState = rememberPagerState { 2 }
+
+    Box(Modifier
+        .padding(0.dp, 10.dp)
+        .padding(paddingWithoutBottom)) {
+        HorizontalPager(pagerState, userScrollEnabled = false) { page ->
+            when (page) {
+                0 -> SchedulePage()
+                1 -> SettingsPage(
+                    padding.calculateBottomPadding(),
+                    navController
+                )
+            }
+        }
         Row(
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             modifier = Modifier
@@ -149,13 +181,16 @@ fun MainPageContainer(padding: PaddingValues, navController: NavController) {
                 )
                 .padding(10.dp)
         ) {
-            MenuButton(1, selectedMenu) { x -> CalendarDays(x) }
+            MenuButton(1, selectedMenu, onClick = {
+                coroutineScope.launch {
+                    pagerState.animateScrollToPage(0)
+                }
+            }) { x -> CalendarDays(x) }
             MenuButton(2, selectedMenu, onClick = {
                 coroutineScope.launch {
-                    sessionManager.clear()
-                    navController.navigate(Routes.Login)
+                    pagerState.animateScrollToPage(1)
                 }
-            }) { x -> LogOut(x) }
+            }) { x -> Settings(x) }
         }
     }
 }
@@ -222,45 +257,4 @@ fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this
     is ContextWrapper -> baseContext.findActivity()
     else -> null
-}
-
-@Composable
-@Preview
-fun Preview() {
-    LockScreenOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT)
-    val selectedMenu = remember { mutableIntStateOf(2) }
-
-    MyFEFUTheme(Default, true) {
-        Scaffold { padding ->
-            val paddingWithoutBottom = PaddingValues(
-                padding.calculateLeftPadding(LayoutDirection.Ltr),
-                padding.calculateTopPadding(),
-                padding.calculateRightPadding(LayoutDirection.Ltr),
-                0.dp
-            )
-            Box(Modifier.padding(paddingWithoutBottom)) {
-                SchedulePage(rememberNavController())
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(
-                            0.dp,
-                            0.dp,
-                            0.dp,
-                            padding.calculateBottomPadding()
-                        )
-                        .background(
-                            MaterialTheme.colorScheme.background,
-                            CircleShape
-                        )
-                        .padding(10.dp)
-                ) {
-                    MenuButton(1, selectedMenu) { x -> MapPin(x) }
-                    MenuButton(2, selectedMenu) { x -> CalendarDays(x) }
-                    MenuButton(3, selectedMenu) { x -> QrCode(x) }
-                }
-            }
-        }
-    }
 }

@@ -1,6 +1,5 @@
 package ru.jone501.myfefu.pages
 
-import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -35,10 +34,13 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import kotlinx.coroutines.launch
+import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 import ru.jone501.myfefu.R
 import ru.jone501.myfefu.Routes
 import ru.jone501.myfefu.data.repository.EncryptedSessionManager
+import ru.jone501.myfefu.data.viewmodel.LessonsViewModel
+import ru.jone501.myfefu.data.viewmodel.ProfileInfoViewModel
 import ru.jone501.myfefu.domain.model.AuthToken
 import ru.jone501.myfefu.networking.token.TokenService
 import ru.jone501.myfefu.networking.token.request.CreateTokenRequest
@@ -47,7 +49,14 @@ import ru.jone501.myfefu.ui.theme.MontserratAlternates
 import ru.jone501.myfefu.ui.theme.MyFEFUTheme
 
 @Composable
-fun LoginPage(padding: PaddingValues, navController: NavController, tokenService: TokenService = koinInject(), sessionManager: EncryptedSessionManager = koinInject()) {
+fun LoginPage(
+    padding: PaddingValues,
+    navController: NavController,
+    tokenService: TokenService = koinInject(),
+    profileInfoViewModel: ProfileInfoViewModel = koinViewModel(),
+    lessonsViewModel: LessonsViewModel = koinViewModel(),
+    sessionManager: EncryptedSessionManager = koinInject()
+) {
     val loginFieldState = rememberTextFieldState()
     val passwordFieldState = rememberTextFieldState()
     val coroutineScope = rememberCoroutineScope()
@@ -104,28 +113,34 @@ fun LoginPage(padding: PaddingValues, navController: NavController, tokenService
                         )
                     },
                 )
-                Button(onClick = {
-                    coroutineScope.launch {
-                        val response = tokenService.createToken(
-                            CreateTokenRequest(
-                                loginFieldState.text.toString(),
-                                passwordFieldState.text.toString(),
+                Button(
+                    onClick = {
+                        coroutineScope.launch {
+                            val response = tokenService.createToken(
+                                CreateTokenRequest(
+                                    loginFieldState.text.toString(),
+                                    passwordFieldState.text.toString(),
+                                )
                             )
-                        )
-                        val responseBody = response.body()
-                        if (response.isSuccessful && responseBody != null) {
-                            Log.i("SESSION", "${loginFieldState.text} ${passwordFieldState.text}")
-                            sessionManager.set(AuthToken(
-                                responseBody.access_token,
-                                responseBody.refresh_token
-                            ))
-                            navController.navigate(Routes.Main)
+                            val responseBody = response.body()
+                            if (response.isSuccessful && responseBody != null) {
+                                sessionManager.setToken(
+                                    AuthToken(
+                                        responseBody.access_token,
+                                        responseBody.refresh_token
+                                    )
+                                )
+                                profileInfoViewModel.init()
+                                lessonsViewModel.init()
+                                navController.navigate(Routes.MAIN)
+                            }
                         }
-                    }
-                },
+                    },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceTint
-                    )) {
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        contentColor = MaterialTheme.colorScheme.onBackground
+                    )
+                ) {
                     Text(
                         stringResource(R.string.login_verb).uppercase(),
                         fontSize = 20.sp,

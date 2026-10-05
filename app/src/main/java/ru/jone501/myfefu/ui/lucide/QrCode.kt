@@ -1,4 +1,4 @@
-package ru.jone501.myfefu.lucide
+package ru.jone501.myfefu.ui.lucide
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor

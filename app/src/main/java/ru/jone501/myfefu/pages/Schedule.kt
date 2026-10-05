@@ -1,6 +1,5 @@
 package ru.jone501.myfefu.pages
 
-import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.BorderStroke
@@ -33,17 +32,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.mutableStateSetOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
-import androidx.compose.runtime.snapshots.SnapshotStateMap
-import androidx.compose.runtime.snapshots.SnapshotStateSet
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -52,118 +48,68 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import org.koin.compose.koinInject
+import org.koin.compose.viewmodel.koinViewModel
 import ru.jone501.myfefu.R
-import ru.jone501.myfefu.Routes
+import ru.jone501.myfefu.data.repository.EncryptedSessionManager
+import ru.jone501.myfefu.data.viewmodel.LessonsViewModel
 import ru.jone501.myfefu.domain.model.Lesson
-import ru.jone501.myfefu.domain.model.StudentProfileInfo
 import ru.jone501.myfefu.domain.model.facilityPrettier
-import ru.jone501.myfefu.networking.api.ApiService
-import ru.jone501.myfefu.networking.api.request.ScheduleRequest
-import ru.jone501.myfefu.networking.token.NetworkRequestInterceptor
-import ru.jone501.myfefu.ui.theme.Default
 import ru.jone501.myfefu.ui.theme.MontserratAlternates
-import ru.jone501.myfefu.ui.theme.MyFEFUTheme
 import ru.jone501.myfefu.utils.abbreviated
 import ru.jone501.myfefu.utils.academicWeekNumber
-import ru.jone501.myfefu.utils.academicYearStartDate
 import ru.jone501.myfefu.utils.getMainLocale
 import ru.jone501.myfefu.utils.getStartOfWeek
 import ru.jone501.myfefu.utils.swapIfRu
 import ru.jone501.myfefu.utils.toStringWithMonth
-import java.io.IOException
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 @Composable
-fun SchedulePage(navController: NavController, apiService: ApiService = koinInject()) {
-    val subgroups: SnapshotStateSet<String> = remember { mutableStateSetOf() }
-    val selectedSubgroup: MutableState<String?> = rememberSaveable { mutableStateOf(null) }
-
+fun SchedulePage(
+    lessonsViewModel: LessonsViewModel = koinViewModel(),
+    sessionManager: EncryptedSessionManager = koinInject()
+) {
     val pagesCount = Int.MAX_VALUE
     val initialPage = pagesCount / 2
     val pagerState = rememberPagerState(initialPage) { pagesCount }
 
     val today = LocalDate.now()
+
     val selectedWeekDelta = rememberSaveable { mutableIntStateOf(0) }
     val selectedDayOfWeek = rememberSaveable { mutableStateOf(today.dayOfWeek) }
 
-    val startOfAcademicYear = today.academicYearStartDate()
+    val selectedSubgroup: MutableState<String?> = rememberSaveable { mutableStateOf(null) }
 
-    val studentProfileState: MutableState<StudentProfileInfo?> = remember { mutableStateOf(null) }
-    val lessonsState: SnapshotStateMap<LocalDate, MutableList<Lesson>> = remember { mutableStateMapOf() }
+    val lessons by lessonsViewModel.lessons.collectAsState()
+    val subgroups by lessonsViewModel.subgroups.collectAsState()
 
-    LaunchedEffect("lessons") {
-        // Student Profile
-        try {
-            apiService.getStudentProfile().let {
-                if (it.isSuccessful) {
-                    studentProfileState.value = it.body()?.data?.firstOrNull()
-                } else when (it.code()) {
-                    NetworkRequestInterceptor.UNAUTHORIZED_CODE,
-                    NetworkRequestInterceptor.FORBIDDEN_CODE -> {
-                        navController.navigate(Routes.Login)
-                    }
-                }
-            }
-        } catch (e: IOException) {
-            Log.i("ERROR", e.message, e)
-        }
-        // Lessons
-        try {
-            val studentProfileInfo: StudentProfileInfo? = studentProfileState.value
-            if (studentProfileInfo != null) {
-                apiService.getSchedule(
-                    ScheduleRequest(
-                        "query ReadLessons {lessons(start_time: \"$startOfAcademicYear 00:00:00\", end_time: \"${
-                            startOfAcademicYear.plusYears(
-                                1
-                            )
-                        } 00:00:00\", academic_groups: [${studentProfileInfo.academicGroupId}]) {id guid discipline {name name_en} start_time end_time academicGroup {name} facility {name} teacher {fullName id academicDegree {name name_en}} academicControl {name name_en} ppsLoad {name name_en} academicSubgroup {name} distance_education_url distance_education_description}}"
-                    )
-                ).let {
-                    if (it.isSuccessful) {
-                        var addedLessons = 0
-                        var addedSubgroups = 0
-                        val lessonsToAdd = it.body()?.data?.lessons ?: listOf()
-                        for (lesson in lessonsToAdd) {
-                            val lessonDate = lesson.start_time.toLocalDate()
-                            if (lessonsState[lessonDate] == null) {
-                                lessonsState[lessonDate] = mutableListOf()
-                            }
-                            if (!lessonsState[lessonDate]!!.contains(lesson)) {
-                                lessonsState[lessonDate]!!.add(lesson)
-                                addedLessons++
-                                if (lesson.academicSubgroup != null) {
-                                    if (subgroups.add(lesson.academicSubgroup!!.name))
-                                        addedSubgroups++
-                                }
-                            }
-                        }
-                        Log.i("LESSONS", "New: $addedLessons, Total: ${lessonsToAdd.size}")
-                        Log.i("SUBGROUPS", "New: $addedSubgroups, Total: ${subgroups.size}")
-                        selectedSubgroup.value = subgroups.minOrNull()
-                    } else when (it.code()) {
-                        NetworkRequestInterceptor.UNAUTHORIZED_CODE,
-                        NetworkRequestInterceptor.FORBIDDEN_CODE -> {
-                            navController.navigate(Routes.Login)
-                        }
-                    }
-                }
-            }
-        } catch (e: IOException) {
-            Log.i("ERROR", e.message, e)
+    LaunchedEffect("initSubgroups") {
+        sessionManager.getSelectedSubgroup().collect {
+            if (it != null) selectedSubgroup.value = it
         }
     }
 
-    LaunchedEffect(null) {
+    LaunchedEffect("onChangeSubgroups") {
+        snapshotFlow { selectedSubgroup.value }.collect { subgroup ->
+            if (subgroup != null)
+                sessionManager.setSelectedSubgroup(subgroup)
+        }
+    }
+
+    LaunchedEffect("subgroups") {
+        lessonsViewModel.subgroups.collect { subgroups ->
+            if (selectedSubgroup.value == null)
+                selectedSubgroup.value = subgroups?.minOrNull()
+        }
+    }
+
+    LaunchedEffect("selectedWeekDelta") {
         snapshotFlow { pagerState.currentPage }.collect { page ->
             selectedWeekDelta.intValue = page - initialPage
         }
@@ -230,7 +176,7 @@ fun SchedulePage(navController: NavController, apiService: ApiService = koinInje
                         )
                     }
                 }
-                AnimatedVisibility(!subgroups.isEmpty()) {
+                AnimatedVisibility(subgroups?.isEmpty()?.not() ?: false) {
                     Row(
                         horizontalArrangement = Arrangement.Center,
                         modifier = Modifier
@@ -241,7 +187,14 @@ fun SchedulePage(navController: NavController, apiService: ApiService = koinInje
                     }
                 }
             }
-            WeekPager(pagerState, initialPage, today, selectedDayOfWeek, selectedSubgroup, lessonsState)
+            WeekPager(
+                pagerState,
+                initialPage,
+                today,
+                selectedDayOfWeek,
+                selectedSubgroup,
+                lessons
+            )
         }
         Box(
             Modifier
@@ -263,7 +216,14 @@ fun SchedulePage(navController: NavController, apiService: ApiService = koinInje
 }
 
 @Composable
-fun WeekPager(pagerState: PagerState, initialPage: Int, today: LocalDate, selectedDayOfWeek: MutableState<DayOfWeek>, selectedSubgroup: MutableState<String?>, lessonsState: SnapshotStateMap<LocalDate, MutableList<Lesson>>) {
+fun WeekPager(
+    pagerState: PagerState,
+    initialPage: Int,
+    today: LocalDate,
+    selectedDayOfWeek: MutableState<DayOfWeek>,
+    selectedSubgroup: MutableState<String?>,
+    lessons: Map<LocalDate, List<Lesson>>?
+) {
     val todayWeek = today.getStartOfWeek()
 
     HorizontalPager(pagerState) { page ->
@@ -281,19 +241,9 @@ fun WeekPager(pagerState: PagerState, initialPage: Int, today: LocalDate, select
             Column(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-//                Text(
-//                    "Расписание могло измениться. Подключитесь к интернету, чтобы проверить обновления.",
-//                    color = MaterialTheme.colorScheme.onSurface,
-//                    fontSize = 12.sp,
-//                    fontWeight = FontWeight.Light,
-//                    fontFamily = MontserratAlternates,
-//                    textAlign = TextAlign.Center,
-//                    lineHeight = 14.sp,
-//                    modifier = Modifier.padding(15.dp, 0.dp)
-//                )
                 LessonList(
                     currentWeek.plusDays(selectedDayOfWeek.value.value - 1L),
-                    lessonsState,
+                    lessons,
                     selectedSubgroup
                 )
             }
@@ -366,7 +316,7 @@ fun RowScope.DayElement(date: LocalDate, selectedDayOfWeek: MutableState<DayOfWe
 }
 
 @Composable
-fun SubgroupsSelector(selectedSubgroup: MutableState<String?>, subgroups: SnapshotStateSet<String>) {
+fun GroupsSelector(selectedGroup: MutableState<Int>, groups: Map<Int, String>?) {
     var subgroupMenuExpanded by remember { mutableStateOf(false) }
     val backgroundColor = animateColorAsState(
         if (subgroupMenuExpanded) MaterialTheme.colorScheme.surfaceTint
@@ -383,7 +333,54 @@ fun SubgroupsSelector(selectedSubgroup: MutableState<String?>, subgroups: Snapsh
             .clickable(
                 onClick = {
                     if (!subgroupMenuExpanded) {
-                        if (subgroups.isEmpty())
+                        if (groups?.isEmpty() ?: true)
+                            return@clickable
+                    }
+                    subgroupMenuExpanded = !subgroupMenuExpanded
+                },
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() }
+            )
+            .background(
+                backgroundColor.value,
+                RoundedCornerShape(25.dp)
+            )
+            .border(
+                BorderStroke(2.dp, outlineColor.value),
+                RoundedCornerShape(25.dp)
+            )
+            .padding(10.dp, 1.dp, 1.dp, 1.dp)
+    ) {
+        Text(
+            stringResource(R.string.subgroup),
+            color = MaterialTheme.colorScheme.onSurface,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Medium,
+            fontFamily = MontserratAlternates,
+            modifier = Modifier.padding(0.dp, 2.dp)
+        )
+    }
+}
+
+@Composable
+fun SubgroupsSelector(selectedSubgroup: MutableState<String?>, subgroups: Set<String>?) {
+    var subgroupMenuExpanded by remember { mutableStateOf(false) }
+    val backgroundColor = animateColorAsState(
+        if (subgroupMenuExpanded) MaterialTheme.colorScheme.surfaceTint
+        else MaterialTheme.colorScheme.surface
+    )
+    val outlineColor = animateColorAsState(
+        if (subgroupMenuExpanded) MaterialTheme.colorScheme.onBackground
+        else MaterialTheme.colorScheme.onBackground.copy(0f)
+    )
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .clickable(
+                onClick = {
+                    if (!subgroupMenuExpanded) {
+                        if (subgroups?.isEmpty() ?: true)
                             return@clickable
                     }
                     subgroupMenuExpanded = !subgroupMenuExpanded
@@ -429,27 +426,29 @@ fun SubgroupsSelector(selectedSubgroup: MutableState<String?>, subgroups: Snapsh
                 modifier = Modifier
                     .clip(RoundedCornerShape(25.dp))
             ) {
-                for (subgroup in subgroups) {
-                    if (selectedSubgroup.value == subgroup)
-                        continue
-                    item {
-                        Text(
-                            subgroup,
-                            fontFamily = MontserratAlternates,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Normal,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier
-                                .padding(12.5.dp, 2.dp)
-                                .clickable(
-                                    onClick = {
-                                        if (!transition.isRunning) {
-                                            subgroupMenuExpanded = false
-                                            selectedSubgroup.value = subgroup
-                                        }
-                                    }, indication = null,
-                                    interactionSource = remember { MutableInteractionSource() })
-                        )
+                if (subgroups != null) {
+                    for (subgroup in subgroups) {
+                        if (selectedSubgroup.value == subgroup)
+                            continue
+                        item {
+                            Text(
+                                subgroup,
+                                fontFamily = MontserratAlternates,
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Normal,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier
+                                    .padding(12.5.dp, 2.dp)
+                                    .clickable(
+                                        onClick = {
+                                            if (!transition.isRunning) {
+                                                subgroupMenuExpanded = false
+                                                selectedSubgroup.value = subgroup
+                                            }
+                                        }, indication = null,
+                                        interactionSource = remember { MutableInteractionSource() })
+                            )
+                        }
                     }
                 }
             }
@@ -458,29 +457,46 @@ fun SubgroupsSelector(selectedSubgroup: MutableState<String?>, subgroups: Snapsh
 }
 
 @Composable
-fun LessonList(date: LocalDate, lessonsState: SnapshotStateMap<LocalDate, MutableList<Lesson>>, selectedSubgroup: MutableState<String?>) {
+fun LessonList(date: LocalDate, lessons: Map<LocalDate, List<Lesson>>?, selectedSubgroup: MutableState<String?>) {
     LazyColumn(
         verticalArrangement = Arrangement.spacedBy(10.dp),
         modifier = Modifier
             .clip(RoundedCornerShape(25.dp, 25.dp, 0.dp, 0.dp))
             .fillMaxSize()
     ) {
-        items(lessonsState[date]?.filter { lesson ->
-            lesson.academicSubgroup == null || lesson.academicSubgroup?.name == selectedSubgroup.value
-        }?.sortedBy { it.start_time }?: listOf(), key = { it.id }) { lesson ->
-            LessonElement(
-                lesson.start_time,
-                lesson.end_time,
-                lesson.ppsLoad.name,
-                facilityPrettier(lesson.facility?.name),
-                lesson.discipline.name
-            )
-        }
-        item {
-            Spacer(
-                Modifier
-                    .height(80.dp)
-            )
+        if (lessons?.isEmpty()?.not() ?: false) {
+            val currentLessons = lessons[date]
+            if (currentLessons != null) {
+                items(currentLessons.filter { lesson ->
+                    lesson.academicSubgroup == null || lesson.academicSubgroup?.name == selectedSubgroup.value
+                }.sortedBy { it.start_time }, key = { it.id }) { lesson ->
+                    LessonElement(
+                        lesson.start_time,
+                        lesson.end_time,
+                        lesson.ppsLoad.name,
+                        facilityPrettier(lesson.facility?.name),
+                        lesson.discipline.name
+                    )
+                }
+                item {
+                    Spacer(
+                        Modifier
+                            .height(80.dp)
+                    )
+                }
+            } else {
+                item {
+                    Text(
+                        "Занятий нет",
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Light,
+                        fontFamily = MontserratAlternates,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
         }
     }
 }
@@ -553,13 +569,5 @@ fun LazyItemScope.LessonElement(startTime: LocalDateTime, endTime: LocalDateTime
             fontWeight = FontWeight.SemiBold,
             fontFamily = MontserratAlternates
         )
-    }
-}
-
-@Composable
-@Preview
-fun Preview() {
-    MyFEFUTheme(Default, true) {
-        SchedulePage(rememberNavController())
     }
 }
