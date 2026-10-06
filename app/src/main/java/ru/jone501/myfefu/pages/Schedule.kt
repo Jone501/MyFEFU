@@ -1,8 +1,10 @@
 package ru.jone501.myfefu.pages
 
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.LazyRow
@@ -43,19 +46,26 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.google.gson.Gson
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import ru.jone501.myfefu.R
 import ru.jone501.myfefu.data.repository.EncryptedSessionManager
 import ru.jone501.myfefu.data.viewmodel.LessonsViewModel
+import ru.jone501.myfefu.domain.model.EmptyLesson
 import ru.jone501.myfefu.domain.model.Lesson
 import ru.jone501.myfefu.domain.model.facilityPrettier
 import ru.jone501.myfefu.ui.theme.MontserratAlternates
@@ -84,6 +94,7 @@ fun SchedulePage(
     val selectedWeekDelta = rememberSaveable { mutableIntStateOf(0) }
     val selectedDayOfWeek = rememberSaveable { mutableStateOf(today.dayOfWeek) }
 
+    val selectedGroup: MutableState<Int?> = rememberSaveable { mutableStateOf(null) }
     val selectedSubgroup: MutableState<String?> = rememberSaveable { mutableStateOf(null) }
 
     val lessons by lessonsViewModel.lessons.collectAsState()
@@ -105,7 +116,7 @@ fun SchedulePage(
     LaunchedEffect("subgroups") {
         lessonsViewModel.subgroups.collect { subgroups ->
             if (selectedSubgroup.value == null)
-                selectedSubgroup.value = subgroups?.minOrNull()
+                selectedSubgroup.value = subgroups[7275]?.minOrNull()
         }
     }
 
@@ -176,14 +187,14 @@ fun SchedulePage(
                         )
                     }
                 }
-                AnimatedVisibility(subgroups?.isEmpty()?.not() ?: false) {
+                AnimatedVisibility(subgroups[7275]?.isEmpty()?.not() ?: false) {
                     Row(
                         horizontalArrangement = Arrangement.Center,
                         modifier = Modifier
                             .padding(0.dp, 10.dp, 0.dp, 0.dp)
                             .fillMaxWidth()
                     ) {
-                        SubgroupsSelector(selectedSubgroup, subgroups)
+                        SubgroupsSelector(selectedSubgroup, subgroups[7275])
                     }
                 }
             }
@@ -222,7 +233,7 @@ fun WeekPager(
     today: LocalDate,
     selectedDayOfWeek: MutableState<DayOfWeek>,
     selectedSubgroup: MutableState<String?>,
-    lessons: Map<LocalDate, List<Lesson>>?
+    lessons: Map<Int, Map<String, Map<LocalDate, List<Lesson>>>?>
 ) {
     val todayWeek = today.getStartOfWeek()
 
@@ -457,26 +468,37 @@ fun SubgroupsSelector(selectedSubgroup: MutableState<String?>, subgroups: Set<St
 }
 
 @Composable
-fun LessonList(date: LocalDate, lessons: Map<LocalDate, List<Lesson>>?, selectedSubgroup: MutableState<String?>) {
+fun LessonList(date: LocalDate, lessons: Map<Int, Map<String, Map<LocalDate, List<Lesson>>>?>, selectedSubgroup: MutableState<String?>, gson: Gson = koinInject()) {
     LazyColumn(
         verticalArrangement = Arrangement.spacedBy(10.dp),
         modifier = Modifier
             .clip(RoundedCornerShape(25.dp, 25.dp, 0.dp, 0.dp))
             .fillMaxSize()
     ) {
-        if (lessons?.isEmpty()?.not() ?: false) {
-            val currentLessons = lessons[date]
+        Log.i("SUBGROUP", selectedSubgroup.value.toString())
+        Log.i("LESSONS", lessons.toString())
+        Log.i("LESSONS", lessons[7275].toString())
+        if (selectedSubgroup.value != null && lessons[7275]?.get(selectedSubgroup.value)?.isEmpty()?.not() ?: false) {
+            val currentLessons = lessons[7275]?.get(selectedSubgroup.value)?.get(date)
+            currentLessons?.forEach {
+                Log.i("LESSON:${selectedSubgroup.value}", it.id.toString())
+            }
             if (currentLessons != null) {
-                items(currentLessons.filter { lesson ->
-                    lesson.academicSubgroup == null || lesson.academicSubgroup?.name == selectedSubgroup.value
-                }.sortedBy { it.start_time }, key = { it.id }) { lesson ->
-                    LessonElement(
-                        lesson.start_time,
-                        lesson.end_time,
-                        lesson.ppsLoad.name,
-                        facilityPrettier(lesson.facility?.name),
-                        lesson.discipline.name
-                    )
+                items(currentLessons, key = { if (it is EmptyLesson) "WINDOW:${it.start_time}" else it.id }) { lesson ->
+                    if (lesson is EmptyLesson) {
+                        EmptyLessonElement(
+                            lesson.start_time,
+                            lesson.end_time
+                        )
+                    } else {
+                        LessonElement(
+                            lesson.start_time,
+                            lesson.end_time,
+                            lesson.ppsLoad.name,
+                            facilityPrettier(lesson.facility?.name),
+                            lesson.discipline.name
+                        )
+                    }
                 }
                 item {
                     Spacer(
@@ -569,5 +591,73 @@ fun LazyItemScope.LessonElement(startTime: LocalDateTime, endTime: LocalDateTime
             fontWeight = FontWeight.SemiBold,
             fontFamily = MontserratAlternates
         )
+    }
+}
+
+@Composable
+fun LazyItemScope.EmptyLessonElement(startTime: LocalDateTime, endTime: LocalDateTime) {
+    val nowDateTime = LocalDateTime.now()
+    val isNow = startTime.toLocalDate() == nowDateTime.toLocalDate()
+            && startTime.isBefore(nowDateTime)
+            && endTime.isAfter(nowDateTime)
+    val outlineColor = animateColorAsState(
+        if (isNow) MaterialTheme.colorScheme.onBackground
+        else MaterialTheme.colorScheme.surface
+    )
+    val formatter = DateTimeFormatter.ofPattern("HH:mm")
+
+    Box(
+        Modifier
+            .wrapContentHeight()
+            .fillMaxWidth()
+            .animateItem()
+    ) {
+        Canvas(
+            modifier = Modifier
+                .padding(2.dp)
+                .matchParentSize()
+        ) {
+            val strokeWidth = 4.dp.toPx()
+            val dashOnLength = 10.dp.toPx()
+            val dashOffLength = 20.dp.toPx()
+            val cornerRadius = 25.dp.toPx()
+
+            val dashPathEffect = PathEffect.dashPathEffect(
+                intervals = floatArrayOf(dashOnLength, dashOffLength),
+                phase = 0f
+            )
+
+            drawRoundRect(
+                color = outlineColor.value,
+                style = Stroke(
+                    width = strokeWidth,
+                    join = StrokeJoin.Round,
+                    cap = StrokeCap.Round,
+                    pathEffect = dashPathEffect
+                ),
+                cornerRadius = CornerRadius(cornerRadius)
+            )
+        }
+        Column(
+            verticalArrangement = Arrangement.spacedBy(5.dp),
+            modifier = Modifier
+                .padding(15.dp)
+        ) {
+            Text(
+                "${startTime.format(formatter)} - ${endTime.format(formatter)}",
+                color = MaterialTheme.colorScheme.onSurface,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                fontFamily = MontserratAlternates,
+                lineHeight = 1.sp
+            )
+            Text(
+                "Окно",
+                color = MaterialTheme.colorScheme.onBackground,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                fontFamily = MontserratAlternates
+            )
+        }
     }
 }

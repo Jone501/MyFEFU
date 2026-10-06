@@ -1,6 +1,7 @@
 package ru.jone501.myfefu.domain.model
 
 import java.time.LocalDateTime
+import java.util.Objects
 import java.util.UUID
 import java.util.regex.Pattern
 
@@ -9,12 +10,12 @@ data class Lessons(
 )
 
 @Suppress("PropertyName")
-data class Lesson(
+open class Lesson(
     var id: Int,
     var guid: UUID,
     var discipline: DisciplineType,
-    var start_time: LocalDateTime,
-    var end_time: LocalDateTime,
+    open var start_time: LocalDateTime,
+    open var end_time: LocalDateTime,
     var academicGroup: AcademicGroupType,
     var facility: FacilityType?,
     var teacher: TeacherType,
@@ -23,6 +24,26 @@ data class Lesson(
     var academicSubgroup: AcademicSubgroupType?,
     var distance_education_url: String,
     var distance_education_description: String,
+)
+
+class EmptyLesson(
+    startTime: LocalDateTime,
+    endTime: LocalDateTime,
+    subgroup: String?
+) : Lesson(
+    Objects.hash(startTime, endTime),
+    UUID.randomUUID(),
+    DisciplineType("WINDOW", "WINDOW"),
+    startTime,
+    endTime,
+    AcademicGroupType(""),
+    null,
+    TeacherType("", "", AcademicDegreeType("", "")),
+    null,
+    PpsLoadType("", ""),
+    if (subgroup != null) AcademicSubgroupType(subgroup) else null,
+    "",
+    ""
 )
 
 data class AcademicGroupType(

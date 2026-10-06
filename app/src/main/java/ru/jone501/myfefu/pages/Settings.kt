@@ -56,7 +56,7 @@ fun SettingsPage(
         Column(
             verticalArrangement = Arrangement.spacedBy(15.dp),
             modifier = Modifier
-                .padding(0.dp, 25.dp, 0.dp, 90.dp)
+                .padding(0.dp, 25.dp, 0.dp, bottomPadding + 80.dp)
         ) {
             Column(
                 modifier = Modifier

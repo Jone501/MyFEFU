@@ -4,28 +4,33 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import ru.jone501.myfefu.domain.model.EmptyLesson
 import ru.jone501.myfefu.domain.model.Lesson
 import ru.jone501.myfefu.domain.model.StudentProfileInfo
 import ru.jone501.myfefu.networking.api.ApiService
 import ru.jone501.myfefu.networking.api.request.ScheduleRequest
 import ru.jone501.myfefu.networking.token.NetworkRequestInterceptor
 import ru.jone501.myfefu.utils.academicYearStartDate
+import ru.jone501.myfefu.utils.mapState
 import java.io.IOException
 import java.time.LocalDate
+import java.time.temporal.ChronoUnit
 
 class LessonsViewModel(
     val profileInfoViewModel: ProfileInfoViewModel,
     val apiService: ApiService
 ) : ViewModel() {
-    private val _lessons: MutableStateFlow<MutableMap<LocalDate, MutableList<Lesson>>?> =
-        MutableStateFlow(null)
-    private val _subgroups: MutableStateFlow<MutableSet<String>?> = MutableStateFlow(null)
+    private val _lessons: MutableStateFlow<Map<Int, Map<String, Map<LocalDate, List<Lesson>>>?>> =
+        MutableStateFlow(mutableMapOf())
     private var _requiresLogin = MutableStateFlow(false)
 
     val lessons = _lessons.asStateFlow()
-    val subgroups = _subgroups.asStateFlow()
+    val subgroups: StateFlow<Map<Int, Set<String>?>> = _lessons.asStateFlow().mapState { lessons ->
+        lessons.mapValues { it.value?.keys?.filter { x -> x != ALL_SUBGROUPS_KEY }?.toSet() }
+    }
     val requiresLogin = _requiresLogin.asStateFlow()
 
     init {
@@ -34,8 +39,7 @@ class LessonsViewModel(
 
     fun init() {
         _requiresLogin.value = false
-        _lessons.value = null
-        _subgroups.value = null
+        _lessons.value = mutableMapOf()
         viewModelScope.launch {
             profileInfoViewModel.studentProfileInfo.collect { studentsInfo ->
                 if (studentsInfo != null) {
@@ -46,17 +50,21 @@ class LessonsViewModel(
         }
     }
 
-    private suspend fun loadLessons(studentProfileInfo: List<StudentProfileInfo>?) {
+    private suspend fun loadLessons(studentProfilesInfo: List<StudentProfileInfo>?) {
+        val result: MutableMap<Int, MutableMap<String, MutableMap<LocalDate, MutableList<Lesson>>>?> = mutableMapOf()
+
         val startOfAcademicYear = LocalDate.now().academicYearStartDate()
-        try {
-            apiService.getSchedule(
-                ScheduleRequest(
-                    """
+        if (studentProfilesInfo != null) {
+            for (studentProfileInfo in studentProfilesInfo) {
+                try {
+                    val response = apiService.getSchedule(
+                        ScheduleRequest(
+                            """
 query ReadLessons {
     lessons(
         start_time: "$startOfAcademicYear 00:00:00",
         end_time: "${startOfAcademicYear.plusYears(1)} 00:00:00",
-        academic_groups: [${studentProfileInfo?.firstOrNull()?.academicGroupId}]
+        academic_groups: [${studentProfileInfo.academicGroupId}]
     ) {
         id
         guid
@@ -95,41 +103,81 @@ query ReadLessons {
         distance_education_description
     }
 }
-                    """
-                )
-            ).let {
-                if (it.isSuccessful) {
-                    val lessonMap: MutableMap<LocalDate, MutableList<Lesson>> = mutableMapOf()
-                    val subgroupsSet: MutableSet<String> = mutableSetOf()
-
-                    val lessonsToAdd = it.body()?.data?.lessons?: listOf()
-                    for (lesson in lessonsToAdd) {
-                        val lessonDate = lesson.start_time.toLocalDate()
-                        if (lessonMap[lessonDate] == null) {
-                            lessonMap[lessonDate] = mutableListOf()
-                        }
-                        if (!lessonMap[lessonDate]!!.contains(lesson)) {
-                            lessonMap[lessonDate]!!.add(lesson)
-                            if (lesson.academicSubgroup != null) {
-                                subgroupsSet.add(lesson.academicSubgroup!!.name)
-                            }
+"""
+                        )
+                    )
+                    val body = response.body()
+                    if (response.isSuccessful && body != null) {
+                        val groupScheduleMap = mutableMapOf<String, MutableMap<LocalDate, MutableList<Lesson>>>()
+                        putGroupLessons(groupScheduleMap, body.data.lessons)
+                        result[studentProfileInfo.academicGroupId] = groupScheduleMap
+                    } else when (response.code()) {
+                        NetworkRequestInterceptor.UNAUTHORIZED_CODE,
+                        NetworkRequestInterceptor.FORBIDDEN_CODE -> {
+                            _requiresLogin.value = true
+                            return
                         }
                     }
-
-                    Log.i("LESSONS", lessonMap.toString())
-                    Log.i("SUBGROUPS", subgroupsSet.toString())
-
-                    _lessons.value = lessonMap
-                    _subgroups.value = subgroupsSet
-                } else when (it.code()) {
-                    NetworkRequestInterceptor.UNAUTHORIZED_CODE,
-                    NetworkRequestInterceptor.FORBIDDEN_CODE -> {
-                        _requiresLogin.value = true
-                    }
+                } catch (e: IOException) {
+                    Log.i("ERROR", e.message, e)
                 }
             }
-        } catch (e: IOException) {
-            Log.i("ERROR", e.message, e)
         }
+        _lessons.value = result
+    }
+
+    private fun putGroupLessons(map: MutableMap<String, MutableMap<LocalDate, MutableList<Lesson>>>, lessons: List<Lesson>) {
+        map[ALL_SUBGROUPS_KEY] = mutableMapOf()
+        for (lesson in lessons) {
+            val subgroup = lesson.academicSubgroup
+            if (subgroup != null) {
+                if (!map.containsKey(subgroup.name)) {
+                    map[subgroup.name] = mutableMapOf()
+                }
+            }
+        }
+
+        for (lesson in lessons) {
+            val subgroup = lesson.academicSubgroup
+            val date = lesson.start_time.toLocalDate()
+            if (subgroup != null) {
+                map.computeIfAbsent(subgroup.name) { mutableMapOf() }
+                    .computeIfAbsent(date) { mutableListOf() }
+                    .add(lesson)
+            } else {
+                for (subgroupMap in map.values) {
+                    subgroupMap.computeIfAbsent(date) { mutableListOf() }
+                        .add(lesson)
+                }
+            }
+        }
+
+        for ((subgroup, subgroupMap) in map.entries) {
+            for (currentDateLessonEntries in subgroupMap.entries) {
+                subgroupMap[currentDateLessonEntries.key] = currentDateLessonEntries.value
+                    .sortedBy { it.start_time }
+                    .fillWindows(subgroup)
+                    .toMutableList()
+            }
+        }
+    }
+
+    private fun List<Lesson>.fillWindows(subgroup: String): List<Lesson> {
+        val result: MutableList<Lesson> = mutableListOf()
+        for ((current, next) in this.zipWithNext()) {
+            result.add(current)
+            var differenceInMinutes = ChronoUnit.MINUTES.between(current.end_time, next.start_time) - 10
+            while (differenceInMinutes > 0) {
+                result.add(EmptyLesson(next.start_time.minusMinutes(differenceInMinutes), next.start_time.minusMinutes(differenceInMinutes - 90), subgroup))
+                differenceInMinutes -= 100
+            }
+        }
+        if (!this.isEmpty())
+            result.add(this.last())
+        return result
+    }
+
+    companion object {
+        const val ALL_SUBGROUPS_KEY = "ALL_SUBGROUPS_KEY"
     }
 }
