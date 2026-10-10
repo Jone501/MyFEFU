@@ -7,15 +7,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
-import ru.jone501.myfefu.data.repository.EncryptedSessionManager
 import ru.jone501.myfefu.domain.model.ProfileInfo
 import ru.jone501.myfefu.domain.model.StudentProfileInfo
+import ru.jone501.myfefu.domain.repository.SessionManager
 import ru.jone501.myfefu.networking.api.ApiService
 import ru.jone501.myfefu.networking.token.NetworkRequestInterceptor
 import java.io.IOException
 
 class ProfileInfoViewModel(
-    val sessionManager: EncryptedSessionManager,
+    val sessionManager: SessionManager,
     val apiService: ApiService
 ) : ViewModel() {
     private val _profileInfo: MutableStateFlow<ProfileInfo?> = MutableStateFlow(null)

@@ -7,15 +7,15 @@ import okhttp3.Request
 import okhttp3.Response
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
-import ru.jone501.myfefu.data.repository.EncryptedSessionManager
 import ru.jone501.myfefu.domain.model.AuthToken
+import ru.jone501.myfefu.domain.repository.SessionManager
 import ru.jone501.myfefu.networking.ApiEndpoints
 import ru.jone501.myfefu.networking.ApiEndpoints.AUTH_HOST
 import ru.jone501.myfefu.networking.token.request.RefreshTokenRequest
 import java.net.URL
 
 class NetworkRequestInterceptor(
-    private val sessionManager: EncryptedSessionManager,
+    private val sessionManager: SessionManager,
 ) : Interceptor, KoinComponent {
     private val tokenService: TokenService by inject()
 

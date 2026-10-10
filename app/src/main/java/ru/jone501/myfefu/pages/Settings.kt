@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
+import ru.jone501.myfefu.APP_VERSION
 import ru.jone501.myfefu.R
 import ru.jone501.myfefu.data.viewmodel.ProfileInfoViewModel
 import ru.jone501.myfefu.navigateToLogin
@@ -99,7 +100,7 @@ fun SettingsPage(
                     Column {
                         Spacer(Modifier.height(25.dp))
                         Text(
-                            "Группы:",
+                            "${stringResource(R.string.groups)}:",
                             fontSize = 16.sp,
                             fontFamily = MontserratAlternates,
                             fontWeight = FontWeight.Medium,
@@ -130,7 +131,7 @@ fun SettingsPage(
                     }
                 }) {
                     Text(
-                        "Выйти из аккаунта".uppercase(),
+                        stringResource(R.string.log_out).uppercase(),
                         fontSize = 14.sp,
                         fontFamily = MontserratAlternates,
                         fontWeight = FontWeight.SemiBold,
@@ -151,7 +152,7 @@ fun SettingsPage(
                 .align(Alignment.BottomEnd)
         ) {
             Text(
-                "v${stringResource(R.string.current_app_version)}",
+                "v$APP_VERSION",
                 fontSize = 16.sp,
                 fontFamily = MontserratAlternates,
                 fontWeight = FontWeight.Normal,

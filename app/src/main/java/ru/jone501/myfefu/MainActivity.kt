@@ -57,11 +57,11 @@ import org.koin.android.ext.koin.androidLogger
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.context.GlobalContext.startKoin
-import ru.jone501.myfefu.data.repository.EncryptedSessionManager
 import ru.jone501.myfefu.data.viewmodel.LessonsViewModel
 import ru.jone501.myfefu.data.viewmodel.ProfileInfoViewModel
 import ru.jone501.myfefu.di.coreModule
 import ru.jone501.myfefu.di.viewModelModule
+import ru.jone501.myfefu.domain.repository.SessionManager
 import ru.jone501.myfefu.networking.di.networkModule
 import ru.jone501.myfefu.pages.LoginPage
 import ru.jone501.myfefu.pages.SchedulePage
@@ -70,6 +70,8 @@ import ru.jone501.myfefu.ui.lucide.CalendarDays
 import ru.jone501.myfefu.ui.lucide.Settings
 import ru.jone501.myfefu.ui.theme.Default
 import ru.jone501.myfefu.ui.theme.MyFEFUTheme
+
+const val APP_VERSION = "0.1.1"
 
 class MainApplication : Application() {
     override fun onCreate() {
@@ -93,7 +95,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             LockScreenOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT)
             val navController = rememberNavController()
-            val sessionManager: EncryptedSessionManager = koinInject()
+            val sessionManager: SessionManager = koinInject()
 
             LaunchedEffect("authorizationCheck") {
                 if (sessionManager.getToken().firstOrNull() == null) {
@@ -128,8 +130,13 @@ class MainActivity : ComponentActivity() {
 }
 
 fun NavController.navigateToLogin() {
-    if (this.currentBackStackEntry?.destination?.route != Routes.LOGIN)
-        this.navigate(Routes.LOGIN)
+    if (this.currentBackStackEntry?.destination?.route != Routes.LOGIN) {
+        try {
+            this.navigate(Routes.LOGIN)
+        } catch (_: IllegalStateException) {
+        } catch (_: IllegalArgumentException) {
+        }
+    }
 }
 
 object Routes {
@@ -153,9 +160,11 @@ fun MainPageContainer(
 
     val pagerState = rememberPagerState { 2 }
 
-    Box(Modifier
-        .padding(0.dp, 10.dp)
-        .padding(paddingWithoutBottom)) {
+    Box(
+        Modifier
+            .padding(0.dp, 0.dp, 0.dp, 10.dp)
+            .padding(paddingWithoutBottom)
+    ) {
         HorizontalPager(pagerState, userScrollEnabled = false) { page ->
             when (page) {
                 0 -> SchedulePage()

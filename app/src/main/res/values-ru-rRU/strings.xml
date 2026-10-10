@@ -29,9 +29,15 @@
     <string name="login">Вход</string>
     <string name="login_literally">Логин</string>
     <string name="password">Пароль</string>
-    <string name="login_verb">Войти</string>
+    <string name="login_in">Войти</string>
     <string name="invalid_credentials">Неверные учётные данные</string>
     <string name="subgroup">Подгруппа</string>
     <string name="settings">Настройки</string>
     <string name="version">Версия</string>
+    <string name="group">Группа</string>
+    <string name="select_group">Выберите группу</string>
+    <string name="window">Окно</string>
+    <string name="groups">Группы</string>
+    <string name="log_out">Выйти из аккаунта</string>
+    <string name="no_lessons">Занятий нет</string>
 </resources>

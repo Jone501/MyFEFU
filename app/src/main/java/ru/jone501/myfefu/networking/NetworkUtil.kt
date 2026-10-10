@@ -1,5 +1,7 @@
 package ru.jone501.myfefu.networking
 
+import ru.jone501.myfefu.APP_VERSION
+
 object ApiEndpoints {
     const val AUTH_HOST = "https://esa.dvfu.ru"
     const val CREATE_TOKEN_URL = "/oauth/token/create"
@@ -10,5 +12,5 @@ object ApiEndpoints {
     const val PROFILE_URL = "/v2/profile/get"
     const val STUDENT_PROFILE_URL = "/v2/student-profile/get"
 
-    const val USER_AGENT: String = "User-Agent: MyFEFU/1.0.0"
+    const val USER_AGENT: String = "User-Agent: MyFEFU/$APP_VERSION"
 }

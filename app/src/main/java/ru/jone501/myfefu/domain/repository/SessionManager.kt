@@ -20,9 +20,13 @@ interface SessionManager {
 
     suspend fun getStudentProfileInfo(): Flow<List<StudentProfileInfo>?>
 
-    suspend fun setSelectedSubgroup(subgroup: String)
+    suspend fun setSelectedSubgroup(group: Int, subgroup: String)
 
-    suspend fun getSelectedSubgroup(): Flow<String?>
+    suspend fun getSelectedSubgroup(): Flow<Map<Int, String>?>
+
+    suspend fun setSelectedGroup(group: Int)
+
+    suspend fun getSelectedGroup(): Flow<Int?>
 
     suspend fun clear()
 }

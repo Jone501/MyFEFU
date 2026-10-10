@@ -20,7 +20,8 @@ private val LightColorScheme = lightColorScheme(
     onBackground = Color(0xFF000000),
     onSurface = Color(0xFF333333),
     onSurfaceVariant = Color(0xFF666666),
-    onTertiary = Color(0xFF999999)
+    onTertiary = Color(0xFF999999),
+    onError = Color(0xFF990000)
 )
 
 private val DarkColorScheme = darkColorScheme(
@@ -31,7 +32,8 @@ private val DarkColorScheme = darkColorScheme(
     onBackground = Color(0xFFffffff),
     onSurface = Color(0xFFCCCCCC),
     onSurfaceVariant = Color(0xFF999999),
-    onTertiary = Color(0xFF666666)
+    onTertiary = Color(0xFF666666),
+    onError = Color(0xFFFF6666)
 )
 
 private val FefuBlueLightColorScheme = lightColorScheme(

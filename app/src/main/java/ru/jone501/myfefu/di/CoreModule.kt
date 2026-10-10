@@ -12,19 +12,22 @@ import com.google.gson.TypeAdapter
 import com.google.gson.stream.JsonReader
 import com.google.gson.stream.JsonWriter
 import org.koin.android.ext.koin.androidContext
-import org.koin.core.module.dsl.singleOf
 import org.koin.core.scope.Scope
+import org.koin.dsl.bind
 import org.koin.dsl.module
+import org.koin.plugin.module.dsl.single
+import ru.jone501.myfefu.data.repository.AppPreferencesImpl
 import ru.jone501.myfefu.data.repository.EncryptedSessionManager
+import ru.jone501.myfefu.domain.repository.AppPreferences
+import ru.jone501.myfefu.domain.repository.SessionManager
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 val coreModule = module {
-    singleOf(::EncryptedSessionManager)
-    single<DataStore<Preferences>> {
-        createDataStore()
-    }
+    single<EncryptedSessionManager>() bind SessionManager::class
+    single<AppPreferencesImpl>() bind AppPreferences::class
+    single<DataStore<Preferences>> { createDataStore() }
     single<Gson> {
         GsonBuilder()
             .registerTypeAdapter(LocalDateTime::class.java, object :
