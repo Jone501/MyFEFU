@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
@@ -32,13 +33,10 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -68,10 +66,9 @@ import ru.jone501.myfefu.pages.SchedulePage
 import ru.jone501.myfefu.pages.SettingsPage
 import ru.jone501.myfefu.ui.lucide.CalendarDays
 import ru.jone501.myfefu.ui.lucide.Settings
-import ru.jone501.myfefu.ui.theme.Default
 import ru.jone501.myfefu.ui.theme.MyFEFUTheme
 
-const val APP_VERSION = "0.1.1"
+const val APP_VERSION = "0.1.2"
 
 class MainApplication : Application() {
     override fun onCreate() {
@@ -112,7 +109,7 @@ class MainActivity : ComponentActivity() {
                 navController.navigateToLogin()
             }
 
-            MyFEFUTheme(Default) {
+            MyFEFUTheme {
                 Scaffold { padding ->
                     NavHost(navController, Routes.MAIN) {
                         composable(Routes.MAIN) {
@@ -155,7 +152,6 @@ fun MainPageContainer(
         padding.calculateRightPadding(LayoutDirection.Ltr),
         0.dp
     )
-    val selectedMenu = rememberSaveable { mutableIntStateOf(1) }
     val coroutineScope = rememberCoroutineScope()
 
     val pagerState = rememberPagerState { 2 }
@@ -167,11 +163,17 @@ fun MainPageContainer(
     ) {
         HorizontalPager(pagerState, userScrollEnabled = false) { page ->
             when (page) {
-                0 -> SchedulePage()
+                0 -> SchedulePage(
+                    padding.calculateBottomPadding()
+                )
                 1 -> SettingsPage(
                     padding.calculateBottomPadding(),
                     navController
-                )
+                ) {
+                    coroutineScope.launch {
+                        pagerState.animateScrollToPage(0)
+                    }
+                }
             }
         }
         Row(
@@ -190,12 +192,12 @@ fun MainPageContainer(
                 )
                 .padding(10.dp)
         ) {
-            MenuButton(1, selectedMenu, onClick = {
+            MenuButton(0, pagerState, onClick = {
                 coroutineScope.launch {
                     pagerState.animateScrollToPage(0)
                 }
             }) { x -> CalendarDays(x) }
-            MenuButton(2, selectedMenu, onClick = {
+            MenuButton(1, pagerState, onClick = {
                 coroutineScope.launch {
                     pagerState.animateScrollToPage(1)
                 }
@@ -205,15 +207,15 @@ fun MainPageContainer(
 }
 
 @Composable
-fun MenuButton(index: Int, selectedMenu: MutableState<Int>, onClick: () -> Unit = {}, iconFunction: (Color) -> ImageVector) {
-    val selected = index == selectedMenu.value
+fun MenuButton(index: Int, pagerState: PagerState, onClick: () -> Unit = {}, iconFunction: (Color) -> ImageVector) {
+    val selected = index == pagerState.currentPage
     val backgroundColor = animateColorAsState(
         if (selected) MaterialTheme.colorScheme.surfaceTint
         else MaterialTheme.colorScheme.surface
     )
     val iconColor = animateColorAsState(
         if (selected) MaterialTheme.colorScheme.onBackground
-        else MaterialTheme.colorScheme.onSurfaceVariant
+        else MaterialTheme.colorScheme.onTertiary
     )
     val outlineColor = animateColorAsState(
         if (selected) MaterialTheme.colorScheme.onBackground
@@ -224,10 +226,7 @@ fun MenuButton(index: Int, selectedMenu: MutableState<Int>, onClick: () -> Unit 
         contentAlignment = Alignment.Center,
         modifier = Modifier
             .clickable(
-                onClick = {
-                    selectedMenu.value = index
-                    onClick()
-                },
+                onClick = onClick,
                 indication = null,
                 interactionSource = remember { MutableInteractionSource() }
             )

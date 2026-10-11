@@ -40,4 +40,9 @@
     <string name="groups">Группы</string>
     <string name="log_out">Выйти из аккаунта</string>
     <string name="no_lessons">Занятий нет</string>
+    <string name="theme">Тема</string>
+
+    <string name="settings_show_windows_title">Окна</string>
+    <string name="settings_show_windows_desc">Отображение окон между занятиями</string>
+    <string name="settings_open_telegram_channel">Телеграм канал проекта</string>
 </resources>

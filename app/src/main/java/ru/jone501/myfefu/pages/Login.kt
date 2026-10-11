@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -32,6 +33,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
@@ -109,28 +111,41 @@ fun LoginPage(
                     color = MaterialTheme.colorScheme.onBackground
                 )
 
-                val textErrorColor = animateColorAsState(
+                val textErrorColor by animateColorAsState(
                     if (showInvalidCredentialsLabel) MaterialTheme.colorScheme.onError
                     else MaterialTheme.colorScheme.onBackground
                 )
+                val placeholderTextErrorColor by animateColorAsState(
+                    if (showInvalidCredentialsLabel) MaterialTheme.colorScheme.onErrorContainer
+                    else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                val backgroundErrorColor by animateColorAsState(
+                    if (showInvalidCredentialsLabel) MaterialTheme.colorScheme.errorContainer
+                    else MaterialTheme.colorScheme.surface
+                )
                 val focusManager = LocalFocusManager.current
                 val textFieldColors = TextFieldDefaults.colors(
-                    focusedContainerColor = MaterialTheme.colorScheme.surface,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                    errorContainerColor = MaterialTheme.colorScheme.surface,
+                    focusedContainerColor = backgroundErrorColor,
+                    unfocusedContainerColor = backgroundErrorColor,
+                    errorContainerColor = backgroundErrorColor,
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent,
                     errorIndicatorColor = Color.Transparent,
-                    cursorColor = textErrorColor.value,
+                    focusedTrailingIconColor = textErrorColor,
+                    unfocusedTrailingIconColor = textErrorColor,
+                    errorTrailingIconColor = textErrorColor,
+                    cursorColor = textErrorColor,
+                    selectionColors = TextSelectionColors(textErrorColor, textErrorColor.copy(0.25f))
                 )
                 val textStyle = TextStyle(
-                    color = textErrorColor.value,
+                    color = textErrorColor,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Medium,
                     fontFamily = MontserratAlternates
                 )
                 TextField(
                     modifier = Modifier
+                        .clip(CircleShape)
                         .width(300.dp)
                         .onPreviewKeyEvent {
                             if (it.key == Key.Tab && it.nativeKeyEvent.action == ACTION_DOWN) {
@@ -157,7 +172,7 @@ fun LoginPage(
                     placeholder = {
                         Text(
                             stringResource(R.string.login_literally),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = placeholderTextErrorColor,
                             fontSize = 18.sp,
                             fontFamily = MontserratAlternates
                         )
@@ -165,6 +180,7 @@ fun LoginPage(
                 )
                 TextField(
                     modifier = Modifier
+                        .clip(CircleShape)
                         .width(300.dp),
                     value = password,
                     onValueChange = {
@@ -179,17 +195,18 @@ fun LoginPage(
                     placeholder = {
                         Text(
                             stringResource(R.string.password),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = placeholderTextErrorColor,
                             fontSize = 18.sp,
                             fontFamily = MontserratAlternates
                         )
                     },
                     trailingIcon = {
                         Icon(
-                            if (showPassword) Eye(MaterialTheme.colorScheme.onBackground)
-                            else EyeClosed(MaterialTheme.colorScheme.onBackground),
+                            if (showPassword) Eye(textErrorColor)
+                            else EyeClosed(textErrorColor),
                             "togglePasswordButton",
                             modifier = Modifier
+                                .padding(end = 10.dp)
                                 .clickable(
                                     onClick = {
                                         showPassword = !showPassword

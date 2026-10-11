@@ -21,7 +21,9 @@ private val LightColorScheme = lightColorScheme(
     onSurface = Color(0xFF333333),
     onSurfaceVariant = Color(0xFF666666),
     onTertiary = Color(0xFF999999),
-    onError = Color(0xFF990000)
+    onError = Color(0xFF800909),
+    onErrorContainer = Color(0xFFDC9393),
+    errorContainer = Color(0xFFEDDDDD)
 )
 
 private val DarkColorScheme = darkColorScheme(
@@ -33,7 +35,9 @@ private val DarkColorScheme = darkColorScheme(
     onSurface = Color(0xFFCCCCCC),
     onSurfaceVariant = Color(0xFF999999),
     onTertiary = Color(0xFF666666),
-    onError = Color(0xFFFF6666)
+    onError = Color(0xFFFF6666),
+    onErrorContainer = Color(0xFF803030),
+    errorContainer = Color(0xFF120707)
 )
 
 private val FefuBlueLightColorScheme = lightColorScheme(
@@ -65,8 +69,7 @@ val FefuBlue: Pair<ColorScheme, ColorScheme> = FefuBlueLightColorScheme to FefuB
 fun MyFEFUTheme(
     theme: Pair<ColorScheme, ColorScheme> = Default,
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = false,
+    dynamicColor: Boolean = false, // Dynamic color is available on Android 12+
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {

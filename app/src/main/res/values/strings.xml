@@ -40,4 +40,9 @@
     <string name="groups">Groups</string>
     <string name="log_out">Log out</string>
     <string name="no_lessons">There are no lessons</string>
+    <string name="theme">Theme</string>
+
+    <string name="settings_show_windows_title">Windows</string>
+    <string name="settings_show_windows_desc">Displaying windows between lessons</string>
+    <string name="settings_open_telegram_channel">Telegram channel of the project</string>
 </resources>

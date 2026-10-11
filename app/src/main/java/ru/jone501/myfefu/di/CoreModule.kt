@@ -16,9 +16,8 @@ import org.koin.core.scope.Scope
 import org.koin.dsl.bind
 import org.koin.dsl.module
 import org.koin.plugin.module.dsl.single
-import ru.jone501.myfefu.data.repository.AppPreferencesImpl
 import ru.jone501.myfefu.data.repository.EncryptedSessionManager
-import ru.jone501.myfefu.domain.repository.AppPreferences
+import ru.jone501.myfefu.data.viewmodel.AppPreferences
 import ru.jone501.myfefu.domain.repository.SessionManager
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -26,7 +25,7 @@ import java.time.format.DateTimeFormatter
 
 val coreModule = module {
     single<EncryptedSessionManager>() bind SessionManager::class
-    single<AppPreferencesImpl>() bind AppPreferences::class
+    single<AppPreferences>()
     single<DataStore<Preferences>> { createDataStore() }
     single<Gson> {
         GsonBuilder()

@@ -1,6 +1,5 @@
 package ru.jone501.myfefu.pages
 
-import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.BorderStroke
@@ -59,6 +58,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -66,6 +66,7 @@ import androidx.compose.ui.window.DialogProperties
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import ru.jone501.myfefu.R
+import ru.jone501.myfefu.data.viewmodel.AppPreferences
 import ru.jone501.myfefu.data.viewmodel.LessonsViewModel
 import ru.jone501.myfefu.domain.model.EmptyLesson
 import ru.jone501.myfefu.domain.model.Lesson
@@ -85,6 +86,7 @@ import java.time.format.DateTimeFormatter
 
 @Composable
 fun SchedulePage(
+    bottomPadding: Dp,
     lessonsViewModel: LessonsViewModel = koinViewModel(),
     sessionManager: SessionManager = koinInject()
 ) {
@@ -177,7 +179,7 @@ fun SchedulePage(
                         fontSize = 16.sp,
                         fontFamily = MontserratAlternates,
                         fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onBackground
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     if (academicWeekNumber != null) {
                         Text(
@@ -185,7 +187,7 @@ fun SchedulePage(
                             fontSize = 16.sp,
                             fontFamily = MontserratAlternates,
                             fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onTertiary
                         )
                         Text(
                             "${
@@ -237,7 +239,8 @@ fun SchedulePage(
                 selectedDayOfWeek,
                 selectedGroup,
                 selectedSubgroup,
-                lessons
+                lessons,
+                bottomPadding
             )
         }
         Box(
@@ -267,7 +270,8 @@ fun WeekPager(
     selectedDayOfWeek: MutableState<DayOfWeek>,
     selectedGroup: MutableState<Int?>,
     selectedSubgroup: MutableState<String?>,
-    lessons: Map<Int, Map<String, Map<LocalDate, List<Lesson>>>?>
+    lessons: Map<Int, Map<String, Map<LocalDate, List<Lesson>>>?>,
+    bottomPadding: Dp
 ) {
     val todayWeek = today.getStartOfWeek()
 
@@ -290,7 +294,8 @@ fun WeekPager(
                     currentWeek.plusDays(selectedDayOfWeek.value.value - 1L),
                     lessons,
                     selectedSubgroup,
-                    selectedGroup
+                    selectedGroup,
+                    bottomPadding
                 )
             }
         }
@@ -595,24 +600,23 @@ fun LessonList(
     date: LocalDate,
     lessons: Map<Int, Map<String, Map<LocalDate, List<Lesson>>>?>,
     selectedSubgroup: MutableState<String?>,
-    selectedGroup: MutableState<Int?>
+    selectedGroup: MutableState<Int?>,
+    bottomPadding: Dp,
+    preferences: AppPreferences = koinViewModel()
 ) {
+    val isWindowsEnabled by preferences.windowsEnabled.collectAsState()
+
     LazyColumn(
         verticalArrangement = Arrangement.spacedBy(10.dp),
         modifier = Modifier
             .clip(RoundedCornerShape(25.dp, 25.dp, 0.dp, 0.dp))
             .fillMaxSize()
     ) {
-        Log.i("SUBGROUP", selectedSubgroup.value.toString())
-        Log.i("LESSONS", lessons.toString())
-        Log.i("LESSONS", lessons[selectedGroup.value].toString())
         if (selectedGroup.value != null && selectedSubgroup.value != null && lessons[selectedGroup.value]?.get(selectedSubgroup.value)?.isEmpty()?.not() ?: false) {
             val currentLessons = lessons[selectedGroup.value]?.get(selectedSubgroup.value)?.get(date)
-            currentLessons?.forEach {
-                Log.i("LESSON:${selectedSubgroup.value}", it.id.toString())
-            }
             if (currentLessons != null) {
-                items(currentLessons, key = { if (it is EmptyLesson) "WINDOW:${it.start_time}" else it.id }) { lesson ->
+                items(currentLessons.filter { it !is EmptyLesson || isWindowsEnabled },
+                    key = { if (it is EmptyLesson) "WINDOW:${it.start_time}" else it.id }) { lesson ->
                     if (lesson is EmptyLesson) {
                         EmptyLessonElement(
                             lesson.start_time,
@@ -631,7 +635,7 @@ fun LessonList(
                 item {
                     Spacer(
                         Modifier
-                            .height(80.dp)
+                            .height(bottomPadding + 65.dp)
                     )
                 }
             } else {
