@@ -45,4 +45,11 @@
     <string name="settings_show_windows_title">Windows</string>
     <string name="settings_show_windows_desc">Displaying windows between lessons</string>
     <string name="settings_open_telegram_channel">Telegram channel of the project</string>
+    <string name="distance_education_link">Link</string>
+    <string name="distance_education_desc">Description</string>
+    <string name="teacher">Teacher</string>
+    <string name="time">Time</string>
+    <string name="lesson_type">Lesson type</string>
+    <string name="classroom">Classroom</string>
+    <string name="discipline">Discipline</string>
 </resources>

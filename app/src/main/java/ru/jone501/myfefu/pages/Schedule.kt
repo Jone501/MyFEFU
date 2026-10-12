@@ -465,7 +465,7 @@ fun LessonInfoDialog(lesson: Lesson, onDismiss: () -> Unit) {
             ) {
                 Column {
                     Text(
-                        "Дисциплина:",
+                        "${stringResource(R.string.discipline)}:",
                         color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
@@ -485,7 +485,7 @@ fun LessonInfoDialog(lesson: Lesson, onDismiss: () -> Unit) {
                         modifier = Modifier.padding(top = 5.dp)
                     ) {
                         Text(
-                            "Аудитория:",
+                            "${stringResource(R.string.classroom)}:",
                             color = MaterialTheme.colorScheme.onSurface,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Medium,
@@ -504,7 +504,7 @@ fun LessonInfoDialog(lesson: Lesson, onDismiss: () -> Unit) {
                     Modifier.padding(top = 5.dp)
                 ) {
                     Text(
-                        "Тип занятия:",
+                        "${stringResource(R.string.lesson_type)}:",
                         color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
@@ -523,7 +523,7 @@ fun LessonInfoDialog(lesson: Lesson, onDismiss: () -> Unit) {
                     modifier = Modifier.padding(top = 5.dp)
                 ) {
                     Text(
-                        "Время:",
+                        "${stringResource(R.string.time)}:",
                         color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
@@ -542,7 +542,7 @@ fun LessonInfoDialog(lesson: Lesson, onDismiss: () -> Unit) {
                         Modifier.padding(top = 5.dp)
                     ) {
                         Text(
-                            "Преподаватель:",
+                            "${stringResource(R.string.teacher)}:",
                             color = MaterialTheme.colorScheme.onSurface,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Medium,
@@ -562,7 +562,7 @@ fun LessonInfoDialog(lesson: Lesson, onDismiss: () -> Unit) {
                         Modifier.padding(top = 5.dp)
                     ) {
                         Text(
-                            "Описание:",
+                            "${stringResource(R.string.distance_education_desc)}:",
                             color = MaterialTheme.colorScheme.onSurface,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Medium,
@@ -594,7 +594,7 @@ fun LessonInfoDialog(lesson: Lesson, onDismiss: () -> Unit) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            "Ссылка",
+                            stringResource(R.string.distance_education_link),
                             color = MaterialTheme.colorScheme.onBackground,
                             fontSize = 20.sp,
                             fontWeight = FontWeight.SemiBold,

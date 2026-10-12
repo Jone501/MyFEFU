@@ -45,4 +45,11 @@
     <string name="settings_show_windows_title">Окна</string>
     <string name="settings_show_windows_desc">Отображение окон между занятиями</string>
     <string name="settings_open_telegram_channel">Телеграм канал проекта</string>
+    <string name="distance_education_link">Ссылка</string>
+    <string name="distance_education_desc">Описание</string>
+    <string name="teacher">Преподаватель</string>
+    <string name="time">Время</string>
+    <string name="lesson_type">Тип занятия</string>
+    <string name="classroom">Аудитория</string>
+    <string name="discipline">Дисциплина</string>
 </resources>
