@@ -18,7 +18,7 @@ open class Lesson(
     open var end_time: LocalDateTime,
     var academicGroup: AcademicGroupType,
     var facility: FacilityType?,
-    var teacher: TeacherType,
+    var teacher: TeacherType?,
     var academicControl: Any?,
     var ppsLoad: PpsLoadType,
     var academicSubgroup: AcademicSubgroupType?,

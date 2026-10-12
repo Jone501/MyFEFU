@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
@@ -55,6 +57,7 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -72,6 +75,7 @@ import ru.jone501.myfefu.domain.model.EmptyLesson
 import ru.jone501.myfefu.domain.model.Lesson
 import ru.jone501.myfefu.domain.model.facilityPrettier
 import ru.jone501.myfefu.domain.repository.SessionManager
+import ru.jone501.myfefu.ui.lucide.ExternLink
 import ru.jone501.myfefu.ui.theme.MontserratAlternates
 import ru.jone501.myfefu.utils.abbreviated
 import ru.jone501.myfefu.utils.academicWeekNumber
@@ -416,6 +420,199 @@ fun GroupsSelector(selectedGroup: MutableState<Int?>, groups: Map<Int, String>?)
 }
 
 @Composable
+fun LessonInfoDialog(lesson: Lesson, onDismiss: () -> Unit) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val formatter = DateTimeFormatter.ofPattern("HH:mm")
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .background(MaterialTheme.colorScheme.background.copy(0.5f))
+                .clickable(
+                    onClick = onDismiss,
+                    indication = null,
+                    interactionSource = interactionSource
+                )
+                .padding(25.dp)
+                .fillMaxSize()
+        ) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(5.dp),
+                modifier = Modifier
+                    .clickable(
+                        onClick = { },
+                        indication = null,
+                        interactionSource = interactionSource
+                    )
+                    .dropShadow(
+                        RoundedCornerShape(25.dp),
+                        Shadow(
+                            25.dp,
+                            MaterialTheme.colorScheme.background,
+                            10.dp
+                        )
+                    )
+                    .background(
+                        MaterialTheme.colorScheme.surface,
+                        RoundedCornerShape(25.dp)
+                    )
+                    .fillMaxWidth()
+                    .padding(15.dp)
+            ) {
+                Column {
+                    Text(
+                        "Дисциплина:",
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        fontFamily = MontserratAlternates
+                    )
+                    Text(
+                        lesson.discipline.name,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = MontserratAlternates
+                    )
+                }
+                if (lesson.facility != null) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(5.dp),
+                        modifier = Modifier.padding(top = 5.dp)
+                    ) {
+                        Text(
+                            "Аудитория:",
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium,
+                            fontFamily = MontserratAlternates
+                        )
+                        Text(
+                            lesson.facility!!.name,
+                            color = MaterialTheme.colorScheme.onBackground,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = MontserratAlternates
+                        )
+                    }
+                }
+                Column(
+                    Modifier.padding(top = 5.dp)
+                ) {
+                    Text(
+                        "Тип занятия:",
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        fontFamily = MontserratAlternates
+                    )
+                    Text(
+                        lesson.ppsLoad.name,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = MontserratAlternates
+                    )
+                }
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(5.dp),
+                    modifier = Modifier.padding(top = 5.dp)
+                ) {
+                    Text(
+                        "Время:",
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        fontFamily = MontserratAlternates
+                    )
+                    Text(
+                        "${lesson.start_time.format(formatter)} - ${lesson.end_time.format(formatter)}",
+                        color = MaterialTheme.colorScheme.onBackground,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = MontserratAlternates
+                    )
+                }
+                if (lesson.teacher != null) {
+                    Column(
+                        Modifier.padding(top = 5.dp)
+                    ) {
+                        Text(
+                            "Преподаватель:",
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium,
+                            fontFamily = MontserratAlternates
+                        )
+                        Text(
+                            lesson.teacher!!.fullName,
+                            color = MaterialTheme.colorScheme.onBackground,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = MontserratAlternates
+                        )
+                    }
+                }
+                if (lesson.distance_education_description.isNotEmpty()) {
+                    Column(
+                        Modifier.padding(top = 5.dp)
+                    ) {
+                        Text(
+                            "Описание:",
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium,
+                            fontFamily = MontserratAlternates
+                        )
+                        Text(
+                            lesson.distance_education_description,
+                            color = MaterialTheme.colorScheme.onBackground,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = MontserratAlternates
+                        )
+                    }
+                }
+                if (lesson.distance_education_url.isNotEmpty()) {
+                    val uriHandler = LocalUriHandler.current
+
+                    Row(
+                        Modifier
+                            .padding(top = 5.dp)
+                            .clip(CircleShape)
+                            .clickable(onClick = {
+                                uriHandler.openUri(lesson.distance_education_url)
+                            })
+                            .fillMaxWidth()
+                            .background(MaterialTheme.colorScheme.surfaceTint)
+                            .padding(10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(7.5.dp, Alignment.CenterHorizontally),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "Ссылка",
+                            color = MaterialTheme.colorScheme.onBackground,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            fontFamily = MontserratAlternates
+                        )
+                        Image(
+                            imageVector = ExternLink(MaterialTheme.colorScheme.onBackground, 3f),
+                            contentDescription = "Distance education link",
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 fun GroupSelectionDialog(selectedGroup: MutableState<Int?>, groups: Map<Int, String>, onDismiss: () -> Unit) {
     val interactionSource = remember { MutableInteractionSource() }
     Dialog(
@@ -425,7 +622,7 @@ fun GroupSelectionDialog(selectedGroup: MutableState<Int?>, groups: Map<Int, Str
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
-                .background(MaterialTheme.colorScheme.background.copy(0.25f))
+                .background(MaterialTheme.colorScheme.background.copy(0.5f))
                 .clickable(
                     onClick = onDismiss,
                     indication = null,
@@ -451,10 +648,9 @@ fun GroupSelectionDialog(selectedGroup: MutableState<Int?>, groups: Map<Int, Str
                         )
                     )
                     .background(
-                        MaterialTheme.colorScheme.surfaceTint,
+                        MaterialTheme.colorScheme.surface,
                         RoundedCornerShape(25.dp)
                     )
-                    .padding(2.dp),
             ) {
                 Text(
                     stringResource(R.string.select_group),
@@ -605,6 +801,7 @@ fun LessonList(
     preferences: AppPreferences = koinViewModel()
 ) {
     val isWindowsEnabled by preferences.windowsEnabled.collectAsState()
+    val viewLesson: MutableState<Lesson?> = remember { mutableStateOf(null) }
 
     LazyColumn(
         verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -624,6 +821,8 @@ fun LessonList(
                         )
                     } else {
                         LessonElement(
+                            viewLesson,
+                            lesson,
                             lesson.start_time,
                             lesson.end_time,
                             lesson.ppsLoad.name,
@@ -653,10 +852,13 @@ fun LessonList(
             }
         }
     }
+    if (viewLesson.value != null) {
+        LessonInfoDialog(viewLesson.value!!) { viewLesson.value = null }
+    }
 }
 
 @Composable
-fun LazyItemScope.LessonElement(startTime: LocalDateTime, endTime: LocalDateTime, type: String, facility: String?, discipline: String) {
+fun LazyItemScope.LessonElement(viewLesson: MutableState<Lesson?>, lesson: Lesson, startTime: LocalDateTime, endTime: LocalDateTime, type: String, facility: String?, discipline: String) {
     val nowDateTime = LocalDateTime.now()
     val isNow = startTime.toLocalDate() == nowDateTime.toLocalDate()
             && startTime.isBefore(nowDateTime)
@@ -674,6 +876,12 @@ fun LazyItemScope.LessonElement(startTime: LocalDateTime, endTime: LocalDateTime
     Column(
         verticalArrangement = Arrangement.spacedBy(5.dp),
         modifier = Modifier
+            .clip(
+                RoundedCornerShape(25.dp)
+            )
+            .clickable(onClick = {
+                viewLesson.value = lesson
+            })
             .background(
                 backgroundColor.value,
                 RoundedCornerShape(25.dp)
