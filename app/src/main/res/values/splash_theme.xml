@@ -2,7 +2,7 @@
 <resources>
     <style name="Theme.MyFEFU.Splash" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/fefu_blue</item> <!-- Фон заставки -->
-        <item name="windowSplashScreenAnimatedIcon">@drawable/fefu_logo_foreground</item> <!-- Ваша иконка -->
+        <item name="windowSplashScreenAnimatedIcon">@drawable/my_fefu_logo_foreground</item> <!-- Ваша иконка -->
         <item name="windowSplashScreenAnimationDuration">1000</item> <!-- Длительность анимации -->
         <item name="postSplashScreenTheme">@style/Theme.MyFEFU</item> <!-- Тема после заставки -->
 

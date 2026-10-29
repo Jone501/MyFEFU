@@ -94,10 +94,10 @@ fun LoginPage(
                 .padding(0.dp, 0.dp, 0.dp, 50.dp)
         ) {
             Icon(
-                painterResource(R.drawable.fefu_logo),
-                "fefu_logo",
+                painterResource(R.drawable.my_fefu_logo),
+                "my_fefu_logo",
                 tint = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier.height(150.dp)
+                modifier = Modifier.height(200.dp)
             )
             Column(
                 verticalArrangement = Arrangement.spacedBy(15.dp),
